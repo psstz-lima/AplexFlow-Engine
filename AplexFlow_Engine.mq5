@@ -8,22 +8,29 @@
 #define LQ_MAGIC_SUFFIX 105
 
 enum RiskProfile { Safe=0, Aggressive=1 };
-input RiskProfile Profile = Safe;
+RiskProfile Profile = Safe;
 
 enum StrategyMode { Core=0, Pullback=1, Quantum=2, Defensive=3, Adaptive=4, LiquidityScalp=5 };
-input StrategyMode Mode = Pullback;
+// UI exposta: apenas ADAPTIVE ou LIQUIDITY.
+enum TradingModeUI { TM_ADAPTIVE=0, TM_LIQUIDITY=1 };
+input TradingModeUI InpTradingMode = TM_ADAPTIVE;
 enum ShieldMode { SHIELD_OFF=0, SHIELD_ON=1 };
 input ShieldMode Shield = SHIELD_ON;
 enum DebugLevel { DBG_OFF=0, DBG_SIGNALS=1, DBG_SIGNALS_SHIELD=2, DBG_VERBOSE=3 };
 input DebugLevel Debug = DBG_SIGNALS;
+enum ConfigTemplate { CFG_MANUAL=0, CFG_XAUUSD_M1_RBFX_ECN=1, CFG_XAUUSD_M5_RBFX_STD=2, CFG_SCALP_PREMIUM=3, CFG_SCALP_DEFENSIVE=4, CFG_SCALP_AGGRESSIVE=5, CFG_XAUUSD_M5_247_LIVE=6 };
+input group "Runtime Switches"
+input ConfigTemplate InpConfigTemplate = CFG_XAUUSD_M5_RBFX_STD;
+input bool InpUseSpreadFilter = true;
 input group "Logging"
 input int InpBlockLogThrottleSec = 60;
 
 enum LqState { LQ_IDLE=0, LQ_SWEEP=1, LQ_DISPLACED=2, LQ_MSS=3, LQ_ORDERED=4 };
 enum LqEntryMode { MARKET_ON_MSS=0, LIMIT_RETEST=1, HYBRID=2 };
+enum ExecProfileState { EP_DEFENSIVE=0, EP_NORMAL=1, EP_AGGRESSIVE=2 };
+enum Live247LqProfile { L247_BASE=0, L247_PUSH=1 };
 
 input group "Preset Control"
-input bool InpUseProfilePreset = false;
 input bool InpModeForceModules = false;
 
 input group "Timeframe"
@@ -33,15 +40,15 @@ input bool InpClampTimeframeToM15 = true;
 
 input group "Core Filters"
 input int InpLookback = 8;
-input int InpAtrPeriod = 10;
-input int InpAtrMaLen = 24;
-input double InpAtrFilterMult = 0.95;
+input int InpAtrPeriod = 14;
+input int InpAtrMaLen = 34;
+input double InpAtrFilterMult = 1.02;
 input int InpPascalLenPrice = 4;
 input int InpPascalLenATR = 4;
 input double InpMinTrendStrengthAtr = 0.035;
 input double InpBreakoutBodyAtrMin = 0.11;
 input double InpBreakoutCloseStrengthMin = 0.53;
-input double InpMaxSpreadAtrFrac = 0.15;
+input double InpMaxSpreadAtrFrac = 0.10;
 
 input group "Fibonacci / Pullback"
 input bool InpUseFibo = true;
@@ -67,59 +74,87 @@ input bool InpUseProbRiskAdjust = true;
 input int InpWinrateLen = 24;
 input double InpSeqLossProbMax = 0.35;
 input double InpMinRiskFactor = 0.50;
-input double InpRiskPct = 0.35;
-input int InpMaxTradesPerDay = 25;
-input int InpMaxConsecLosses = 4;
-input double InpMaxDailyDDPct = 1.8;
+input double InpRiskPct = 0.20;
+input int InpMaxTradesPerDay = 10;
+input int InpMaxConsecLosses = 3;
+input double InpMaxDailyDDPct = 2.5;
 
 input group "Trade Management"
-input double InpStopAtrMult = 0.90;
+input double InpStopAtrMult = 0.80;
 input bool InpUseTakeProfit = true;
-input double InpTpAtrMult = 1.25;
+input double InpTpAtrMult = 1.05;
 input bool InpUseBreakEven = true;
-input double InpBreakEvenAtrTrigger = 0.45;
-input int InpBreakEvenOffsetPoints = 4;
-input double InpTrailStartAtr = 0.60;
-input double InpTrailAtrMult = 1.10;
+input double InpBreakEvenAtrTrigger = 0.35;
+input int InpBreakEvenOffsetPoints = 6;
+input double InpTrailStartAtr = 0.55;
+input double InpTrailAtrMult = 1.15;
 
 input group "Execution"
 input bool InpUseSessionFilter = true;
-input int InpTradeStartHour = 6;
-input int InpTradeEndHour = 22;
-input int InpSlippagePoints = 10;
-input int InpMaxDeviationPoints = 8;
+input int InpTradeStartHour = 7;
+input int InpTradeEndHour = 20;
+input int InpSlippagePoints = 6;
+input int InpMaxDeviationPoints = 6;
 input bool InpOnePosPerSymbol = true;
+input bool InpUseDynamicSpreadGate = true;
+input int InpSpreadMedianLen = 200;
+input double InpSpreadMedianMult = 2.00;
+input double InpStopSpreadBufferMult = 2.00;
+input bool InpUseTwoStepExecutionFallback = true;
 
 input group "LiquidityScalp"
-input int InpLqSwingLookback = 24;
-input double InpLqSweepBufferAtr = 0.09;
-input int InpLqSweepMaxAgeBars = 7;
-input double InpLqMinDisplacementAtr = 0.80;
+input int InpLqSwingLookback = 30;
+input double InpLqSweepBufferAtr = 0.10;
+input int InpLqSweepMaxAgeBars = 5;
+input double InpLqMinDisplacementAtr = 0.95;
 input int InpLqMssLookback = 6;
-input double InpLqStopBufferAtr = 0.22;
-input double InpLqTpR = 1.10;
+input double InpLqStopBufferAtr = 0.24;
+input double InpLqTpR = 1.05;
 input LqEntryMode InpLqEntryMode = HYBRID;
-input int InpLqRetestMaxAgeBars = 5;
-input double InpLqRetestTolAtr = 0.07;
+input int InpLqRetestMaxAgeBars = 3;
+input double InpLqRetestTolAtr = 0.06;
 input bool InpLqAllowStopFallback = false;
 input bool InpLqUseStructuralTrail = true;
 input double InpLqStructuralTrailAtr = 0.40;
 
 input group "Execution Shield"
-input int InpShieldSpreadMaLen = 24;
-input double InpShieldSpreadSpikeMult = 1.55;
-input int InpShieldMaxSpreadPoints = 24;
-input double InpShieldAtrShockMult = 1.80;
-input double InpShieldCandleShockMult = 2.10;
-input int InpShieldCooldownBars = 7;
-input int InpShieldSlippageLimitPoints = 8;
+input int InpShieldSpreadMaLen = 34;
+input double InpShieldSpreadSpikeMult = 1.45;
+input int InpShieldMaxSpreadPoints = 18;
+input double InpShieldAtrShockMult = 1.70;
+input double InpShieldCandleShockMult = 1.90;
+input int InpShieldCooldownBars = 9;
+input int InpShieldSlippageLimitPoints = 6;
 
 input group "Adaptive Controller"
-input int InpAdaptConfirmBars = 1;
+input int InpAdaptConfirmBars = 2;
 input int InpAdaptMinBarsBetweenChanges = 2;
 input int InpAdaptMaxChangesPerDay = 20;
-input int InpAdaptMinOutcomeSamples = 8;
+input int InpAdaptMinOutcomeSamples = 16;
 input double InpAdaptFallbackDdFrac = 0.70;
+
+input group "Regime & Performance Control"
+input bool InpUseAtrRegimeGate = true;
+input int InpRegimeAtrMaLen = 100;
+input double InpRegimeAtrMult = 1.00;
+input bool InpUseAutoPause = true;
+input int InpAutoPauseWindowTrades = 30;
+input double InpAutoPausePfStop = 1.05;
+input double InpAutoPauseDdStopPct = 1.50;
+input int InpAutoPauseHours = 24;
+input double InpAutoPausePfResume = 1.15;
+input bool InpUseRiskLadder = true;
+input int InpRiskLadderWindowTrades = 30;
+input double InpRiskLadderLowPf = 1.10;
+input double InpRiskLadderMidPf = 1.25;
+input double InpRiskLadderHighPf = 1.40;
+input double InpRiskLadderMidWinrate = 55.0;
+input double InpRiskLadderHighWinrate = 55.0;
+input double InpRiskLadderHighDdMaxPct = 1.00;
+input double InpRiskLadderLowScale = 0.85;
+input double InpRiskLadderMidScale = 1.20;
+input double InpRiskLadderHighScale = 1.45;
+input double InpRiskLadderMaxScale = 1.50;
 
 struct Params {
    ENUM_TIMEFRAMES tf;
@@ -181,6 +216,11 @@ struct Params {
    int slippagePoints;
    int maxDeviationPoints;
    bool onePosPerSymbol;
+   bool useDynamicSpreadGate;
+   int spreadMedianLen;
+   double spreadMedianMult;
+   double stopSpreadBufferMult;
+   bool useTwoStepExecutionFallback;
 
    int lqSwingLookback;
    double lqSweepBufferAtr;
@@ -203,6 +243,30 @@ struct Params {
    double shieldCandleShockMult;
    int shieldCooldownBars;
    int shieldSlippageLimitPoints;
+
+   bool useAtrRegimeGate;
+   int regimeAtrMaLen;
+   double regimeAtrMult;
+
+   bool useAutoPause;
+   int autoPauseWindowTrades;
+   double autoPausePfStop;
+   double autoPauseDdStopPct;
+   int autoPauseHours;
+   double autoPausePfResume;
+
+   bool useRiskLadder;
+   int riskLadderWindowTrades;
+   double riskLadderLowPf;
+   double riskLadderMidPf;
+   double riskLadderHighPf;
+   double riskLadderMidWinrate;
+   double riskLadderHighWinrate;
+   double riskLadderHighDdMaxPct;
+   double riskLadderLowScale;
+   double riskLadderMidScale;
+   double riskLadderHighScale;
+   double riskLadderMaxScale;
 };
 
 struct PullbackSetup {
@@ -264,6 +328,9 @@ struct Telemetry {
    int shieldBlocksATR;
    int shieldBlocksCandle;
    int shieldBlocksSlippage;
+   int regimeBlocks;
+   int autoPauseBlocks;
+   int autoPauseTriggers;
    int killSwitchBlocks;
    bool killSwitchTriggered;
    datetime killSwitchTriggeredAt;
@@ -289,15 +356,20 @@ double g_dayStartEquity = 0.0;
 int g_tradesToday = 0;
 int g_consecLosses = 0;
 bool g_killSwitch = false;
+bool g_useProfilePreset = false;
 
 int g_outcomes[];
 long g_processedPositionIds[];
+double g_closedPnls[];
 const long MAGIC_NUMBER = 26022026;
 const long LQ_MAGIC_NUMBER = MAGIC_NUMBER + LQ_MAGIC_SUFFIX;
 const string DEBUG_LOG_TARGET_DIR = "D:\\ps_st\\AplexFlow-Engine\\logs";
 const string DEBUG_LOG_COMMON_DIR = "AplexFlow-Engine\\logs";
 Params g_baseParams;
+StrategyMode Mode = Adaptive; // Modo interno definido via InpTradingMode
 StrategyMode g_runtimeMode = Pullback;
+bool g_adaptiveEnabled = true;
+bool g_lqEnabled = false;
 datetime g_shieldBlockedUntil = 0;
 double g_lastExecSlippagePoints = 0.0;
 int g_debugLogHandle = INVALID_HANDLE;
@@ -313,6 +385,24 @@ int g_candidateRegime = RegimeBase;
 int g_candidateRegimeBars = 0;
 datetime g_lastRegimeChangeBar = 0;
 int g_adaptChangesToday = 0;
+datetime g_autoPauseUntil = 0;
+int g_execProfile = EP_NORMAL;
+int g_execProfileLockBars = 0;
+int g_execProfileNormConfirm = 0;
+int g_execProfileAggrConfirm = 0;
+int g_execProfileDefConfirm = 0;
+int g_adxHandle = INVALID_HANDLE;
+int g_live247Profile = L247_BASE;
+int g_live247ProfileLockBars = 0;
+int g_live247ProfileBaseConfirm = 0;
+int g_live247ProfilePushConfirm = 0;
+
+bool ComputeRecentPerformance(const int windowTrades,
+                              double &pf,
+                              double &winrate,
+                              double &localDdPct,
+                              int &samples);
+double ComputePerformanceRiskScale(double &pf, double &winrate, double &localDdPct, int &samples);
 
 string RiskProfileToString(const RiskProfile profile)
 {
@@ -371,6 +461,35 @@ string ShieldModeToString(const ShieldMode mode)
    return (mode == SHIELD_ON ? "ON" : "OFF");
 }
 
+string TradingModeUIToString(const TradingModeUI mode)
+{
+   return (mode == TM_LIQUIDITY ? "LIQUIDITY" : "ADAPTIVE");
+}
+
+string ConfigTemplateToString(const ConfigTemplate cfg)
+{
+   switch(cfg)
+   {
+      case CFG_XAUUSD_M1_RBFX_ECN:return "XAUUSD_M1_RoboForex_ECN";
+      case CFG_XAUUSD_M5_RBFX_STD:return "XAUUSD_M5_RoboForex_StdPro";
+      case CFG_XAUUSD_M5_247_LIVE:return "XAUUSD_M5_24x7_Live";
+      case CFG_SCALP_PREMIUM:   return "ScalpPremium";
+      case CFG_SCALP_DEFENSIVE: return "ScalpDefensive";
+      case CFG_SCALP_AGGRESSIVE:return "ScalpAggressive";
+      default:                  return "Manual";
+   }
+}
+
+bool IsXauUsdM5ManagedTemplate(const ConfigTemplate cfg)
+{
+   return (cfg == CFG_XAUUSD_M5_RBFX_STD || cfg == CFG_XAUUSD_M5_247_LIVE);
+}
+
+bool IsLive247LiquidityTemplate()
+{
+   return (InpConfigTemplate == CFG_XAUUSD_M5_247_LIVE && InpTradingMode == TM_LIQUIDITY && P.tf == PERIOD_M5);
+}
+
 string LqStateToString(const int state)
 {
    switch(state)
@@ -393,6 +512,27 @@ string MarketRegimeToString(const int regime)
       case RegimeChoppy:  return "Choppy";
       case RegimeDefense: return "Defense";
       default:            return "Unknown";
+   }
+}
+
+string ExecProfileToString(const int profile)
+{
+   switch(profile)
+   {
+      case EP_DEFENSIVE:  return "DEFENSIVE";
+      case EP_NORMAL:     return "NORMAL";
+      case EP_AGGRESSIVE: return "AGGRESSIVE";
+      default:            return "UNKNOWN";
+   }
+}
+
+string Live247ProfileToString(const int profile)
+{
+   switch(profile)
+   {
+      case L247_BASE: return "BASE";
+      case L247_PUSH: return "PUSH";
+      default:        return "UNKNOWN";
    }
 }
 
@@ -614,6 +754,27 @@ StrategyMode StrategyModeFromRegime(const int regime)
    }
 }
 
+RiskProfile ProfileFromRegime(const int regime)
+{
+   if(regime == RegimeTrend)
+      return Aggressive;
+   return Safe;
+}
+
+bool StrategyModeUsesPullbackSetup(const StrategyMode mode)
+{
+   switch(mode)
+   {
+      case Pullback:
+      case Quantum:
+      case Defensive:
+      case Adaptive:
+         return true;
+      default:
+         return false;
+   }
+}
+
 void ApplyStrategyModeToParams(Params &params, const StrategyMode mode)
 {
    params.useFibo = false;
@@ -632,7 +793,8 @@ void ApplyStrategyModeToParams(Params &params, const StrategyMode mode)
          break;
 
       case Quantum:
-         params.useFibo = true;
+         // Quantum opera breakout direto com filtros quant para aproveitar regime de tendencia.
+         params.useFibo = false;
          params.useHurst = true;
          params.useAutocorr = true;
          params.hurstMin = (Profile == Safe ? 0.55 : 0.53);
@@ -737,6 +899,413 @@ bool BuildPascalWeights(const int len, double &weights[])
    return true;
 }
 
+void ApplyConfigTemplatePreset(Params &params, const ConfigTemplate cfg)
+{
+   switch(cfg)
+   {
+      case CFG_XAUUSD_M1_RBFX_ECN:
+         params.atrPeriod = 14;
+         params.atrMaLen = 34;
+         params.atrFilterMult = 0.97;
+         params.maxSpreadAtrFrac = 0.25;
+
+         params.riskPct = 0.15;
+         params.maxTradesPerDay = 12;
+         params.maxConsecLosses = 3;
+         params.maxDailyDDPct = 3.5;
+         params.onePosPerSymbol = true;
+         params.useSessionFilter = true;
+         params.tradeStartHour = 7;
+         params.tradeEndHour = 17;
+         params.useDynamicSpreadGate = true;
+         params.spreadMedianLen = 200;
+         params.spreadMedianMult = 2.00;
+         params.stopSpreadBufferMult = 2.00;
+         params.useTwoStepExecutionFallback = true;
+
+         params.stopAtrMult = 0.80;
+         params.useTakeProfit = true;
+         params.tpAtrMult = 1.05;
+         params.useBreakEven = true;
+         params.breakEvenAtrTrigger = 0.35;
+         params.breakEvenOffsetPoints = 8;
+         params.trailStartAtr = 0.55;
+         params.trailAtrMult = 1.10;
+
+         params.lqSwingLookback = 24;
+         params.lqSweepBufferAtr = 0.08;
+         params.lqSweepMaxAgeBars = 10;
+         params.lqMinDisplacementAtr = 0.75;
+         params.lqMssLookback = 8;
+         params.lqStopBufferAtr = 0.24;
+         params.lqTpR = 1.08;
+         params.lqEntryMode = HYBRID;
+         params.lqRetestMaxAgeBars = 12;
+         params.lqRetestTolAtr = 0.10;
+         params.lqAllowStopFallback = true;
+         params.lqUseStructuralTrail = true;
+
+         params.shieldSpreadMaLen = 34;
+         params.shieldMaxSpreadPoints = 140;
+         params.shieldSpreadSpikeMult = 1.90;
+         params.shieldAtrShockMult = 1.70;
+         params.shieldCandleShockMult = 2.00;
+         params.shieldCooldownBars = 5;
+         params.shieldSlippageLimitPoints = 14;
+
+         params.slippagePoints = 12;
+         params.maxDeviationPoints = 12;
+
+         params.useAtrRegimeGate = true;
+         params.regimeAtrMaLen = 100;
+         params.regimeAtrMult = 1.25;
+
+         params.useAutoPause = true;
+         params.autoPauseWindowTrades = 30;
+         params.autoPausePfStop = 1.05;
+         params.autoPauseDdStopPct = 1.50;
+         params.autoPauseHours = 24;
+         params.autoPausePfResume = 1.15;
+
+         params.useRiskLadder = true;
+         params.riskLadderWindowTrades = 30;
+         params.riskLadderLowPf = 1.10;
+         params.riskLadderMidPf = 1.25;
+         params.riskLadderHighPf = 1.40;
+         params.riskLadderMidWinrate = 55.0;
+         params.riskLadderHighWinrate = 55.0;
+         params.riskLadderHighDdMaxPct = 1.00;
+         params.riskLadderLowScale = 0.85;
+         params.riskLadderMidScale = 1.20;
+         params.riskLadderHighScale = 1.45;
+         params.riskLadderMaxScale = 1.50;
+         break;
+
+      case CFG_XAUUSD_M5_RBFX_STD:
+         params.tf = PERIOD_M5;
+         params.atrPeriod = 14;
+         params.atrMaLen = 34;
+         params.atrFilterMult = 0.97;
+         params.maxSpreadAtrFrac = 0.25;
+
+         // XAUUSD M5 respondeu melhor com swing mais curto e setup objetivo.
+         params.swingLookback = 10;
+         params.fiboTolAtr = 0.10;
+         params.fiboMaxBarsToTrigger = 3;
+
+         params.stopAtrMult = 2.20;
+         params.useTakeProfit = true;
+         params.tpAtrMult = 1.50;
+         params.useBreakEven = true;
+         params.breakEvenAtrTrigger = 0.55;
+         params.breakEvenOffsetPoints = 30;
+         params.trailStartAtr = 0.90;
+         params.trailAtrMult = 1.00;
+
+         params.useSessionFilter = true;
+         params.tradeStartHour = 7;
+         params.tradeEndHour = 17;
+         params.onePosPerSymbol = true;
+         params.maxConsecLosses = 3;
+         params.maxTradesPerDay = 8;
+         params.maxDailyDDPct = 2.5;
+
+         params.useDynamicSpreadGate = true;
+         params.spreadMedianLen = 200;
+         params.spreadMedianMult = 2.00;
+         params.stopSpreadBufferMult = 2.00;
+         params.useTwoStepExecutionFallback = true;
+
+         params.shieldSpreadMaLen = 34;
+         params.shieldMaxSpreadPoints = 400;
+         params.shieldSpreadSpikeMult = 1.90;
+         params.shieldAtrShockMult = 1.25;
+         params.shieldCandleShockMult = 2.00;
+         params.shieldCooldownBars = 5;
+         params.shieldSlippageLimitPoints = 14;
+         params.slippagePoints = 12;
+         params.maxDeviationPoints = 12;
+
+         params.lqSwingLookback = 24;
+         params.lqSweepBufferAtr = 0.60;
+         params.lqSweepMaxAgeBars = 10;
+         params.lqMinDisplacementAtr = 0.80;
+         params.lqMssLookback = 8;
+         params.lqStopBufferAtr = 0.24;
+         params.lqTpR = 1.08;
+         params.lqEntryMode = HYBRID;
+         params.lqRetestMaxAgeBars = 8;
+         params.lqRetestTolAtr = 0.10;
+         params.lqAllowStopFallback = true;
+         params.lqUseStructuralTrail = true;
+
+         params.useAtrRegimeGate = true;
+         params.regimeAtrMaLen = 100;
+         params.regimeAtrMult = 1.00;
+
+         params.useAutoPause = true;
+         params.autoPauseWindowTrades = 30;
+         params.autoPausePfStop = 1.20;
+         params.autoPauseDdStopPct = 1.50;
+         params.autoPauseHours = 24;
+         params.autoPausePfResume = 1.20;
+
+         params.useRiskLadder = true;
+         params.riskLadderWindowTrades = 30;
+         params.riskLadderLowPf = 1.20;
+         params.riskLadderMidPf = 1.30;
+         params.riskLadderHighPf = 1.45;
+         params.riskLadderMidWinrate = 55.0;
+         params.riskLadderHighWinrate = 58.0;
+         params.riskLadderHighDdMaxPct = 1.50;
+         params.riskLadderLowScale = 0.85;
+         params.riskLadderMidScale = 1.20;
+         params.riskLadderHighScale = 1.35;
+         params.riskLadderMaxScale = 1.35;
+
+         if(InpTradingMode == TM_LIQUIDITY)
+         {
+            // Liquidity em XAUUSD M5 precisa de janela mais curta e stop estrutural
+            // mais largo para evitar micro-alvos engolidos por spread/latencia.
+            params.riskPct = 0.10;
+            params.maxTradesPerDay = 80;
+            params.maxConsecLosses = 5;
+            params.maxDailyDDPct = 4.0;
+
+            params.atrFilterMult = 0.60;
+            params.useSessionFilter = true;
+            params.tradeStartHour = 6;
+            params.tradeEndHour = 21;
+            params.onePosPerSymbol = true;
+
+            params.useDynamicSpreadGate = false;
+            params.maxSpreadAtrFrac = 0.35;
+            params.slippagePoints = 30;
+            params.maxDeviationPoints = 30;
+
+            params.lqSwingLookback = 6;
+            params.lqSweepBufferAtr = 0.00;
+            params.lqSweepMaxAgeBars = 6;
+            params.lqMinDisplacementAtr = 0.30;
+            params.lqMssLookback = 3;
+            params.lqStopBufferAtr = 0.30;
+            params.lqTpR = 1.35;
+            params.lqEntryMode = HYBRID;
+            params.lqRetestMaxAgeBars = 2;
+            params.lqRetestTolAtr = 0.08;
+            params.lqAllowStopFallback = true;
+            params.lqUseStructuralTrail = true;
+            params.lqStructuralTrailAtr = 0.20;
+
+            params.useBreakEven = false;
+            params.trailStartAtr = 1.20;
+            params.trailAtrMult = 1.00;
+
+            params.useAtrRegimeGate = false;
+            params.useAutoPause = false;
+
+            params.shieldSpreadSpikeMult = 4.00;
+            params.shieldMaxSpreadPoints = 1200;
+            params.shieldAtrShockMult = 4.00;
+            params.shieldCandleShockMult = 5.00;
+            params.shieldCooldownBars = 1;
+            params.shieldSlippageLimitPoints = 80;
+         }
+         else
+         {
+            // Base unica para o preset M5; a agressividade e controlada dinamicamente pelo AutoAggression.
+            params.riskPct = 0.60;
+            params.maxTradesPerDay = 8;
+            params.maxDailyDDPct = 3.0;
+            params.autoPauseDdStopPct = 1.50;
+         }
+         break;
+
+      case CFG_XAUUSD_M5_247_LIVE:
+         params.tf = PERIOD_M5;
+         params.atrPeriod = 14;
+         params.atrMaLen = 34;
+         params.atrFilterMult = 0.98;
+         params.maxSpreadAtrFrac = 0.18;
+
+         params.swingLookback = 10;
+         params.fiboTolAtr = 0.10;
+         params.fiboMaxBarsToTrigger = 3;
+
+         params.stopAtrMult = 0.80;
+         params.useTakeProfit = true;
+         params.tpAtrMult = 1.05;
+         params.useBreakEven = true;
+         params.breakEvenAtrTrigger = 0.45;
+         params.breakEvenOffsetPoints = 5;
+         params.trailStartAtr = 1.00;
+         params.trailAtrMult = 1.20;
+
+         params.useSessionFilter = true;
+         params.tradeStartHour = 5;
+         params.tradeEndHour = 21;
+         params.onePosPerSymbol = true;
+         params.maxTradesPerDay = 30;
+         params.maxConsecLosses = 3;
+         params.maxDailyDDPct = 4.0;
+
+         params.useDynamicSpreadGate = true;
+         params.spreadMedianLen = 200;
+         params.spreadMedianMult = 1.80;
+         params.stopSpreadBufferMult = 2.00;
+         params.useTwoStepExecutionFallback = true;
+
+         params.lqSwingLookback = 12;
+         params.lqSweepBufferAtr = 0.08;
+         params.lqSweepMaxAgeBars = 4;
+         params.lqMinDisplacementAtr = 0.80;
+         params.lqMssLookback = 3;
+         params.lqStopBufferAtr = 0.24;
+         params.lqTpR = 1.23;
+         params.lqEntryMode = HYBRID;
+         params.lqRetestMaxAgeBars = 2;
+         params.lqRetestTolAtr = 0.07;
+         params.lqAllowStopFallback = true;
+         params.lqUseStructuralTrail = true;
+         params.lqStructuralTrailAtr = 0.30;
+
+         params.shieldSpreadMaLen = 34;
+         params.shieldSpreadSpikeMult = 1.60;
+         params.shieldMaxSpreadPoints = 24;
+         params.shieldAtrShockMult = 1.70;
+         params.shieldCandleShockMult = 1.90;
+         params.shieldCooldownBars = 9;
+         params.shieldSlippageLimitPoints = 6;
+         params.slippagePoints = 6;
+         params.maxDeviationPoints = 6;
+
+         params.useAtrRegimeGate = true;
+         params.regimeAtrMaLen = 100;
+         params.regimeAtrMult = 1.00;
+
+         params.useAutoPause = true;
+         params.autoPauseWindowTrades = 30;
+         params.autoPausePfStop = 1.05;
+         params.autoPauseDdStopPct = 1.50;
+         params.autoPauseHours = 24;
+         params.autoPausePfResume = 1.15;
+
+         params.useRiskLadder = true;
+         params.riskLadderWindowTrades = 30;
+         params.riskLadderLowPf = 1.10;
+         params.riskLadderMidPf = 1.25;
+         params.riskLadderHighPf = 1.40;
+         params.riskLadderMidWinrate = 55.0;
+         params.riskLadderHighWinrate = 55.0;
+         params.riskLadderHighDdMaxPct = 1.00;
+         params.riskLadderLowScale = 0.85;
+         params.riskLadderMidScale = 1.20;
+         params.riskLadderHighScale = 1.45;
+         params.riskLadderMaxScale = 1.50;
+
+         if(InpTradingMode == TM_LIQUIDITY)
+         {
+            params.riskPct = 1.25;
+            params.useBreakEven = false;
+            params.trailStartAtr = 1.30;
+            params.trailAtrMult = 1.00;
+            params.useAutoPause = false;
+         }
+         else
+         {
+            params.riskPct = 0.55;
+            params.maxTradesPerDay = 10;
+            params.maxDailyDDPct = 3.0;
+         }
+         break;
+
+      case CFG_SCALP_PREMIUM:
+         // Matches the default premium scalp profile currently used in inputs.
+         break;
+
+      case CFG_SCALP_DEFENSIVE:
+         params.atrPeriod = 14;
+         params.atrMaLen = 40;
+         params.atrFilterMult = 1.05;
+         params.maxSpreadAtrFrac = 0.08;
+         params.riskPct = 0.12;
+         params.maxTradesPerDay = 6;
+         params.maxConsecLosses = 2;
+         params.maxDailyDDPct = 2.0;
+         params.stopAtrMult = 0.85;
+         params.tpAtrMult = 1.00;
+         params.breakEvenAtrTrigger = 0.30;
+         params.breakEvenOffsetPoints = 7;
+         params.trailStartAtr = 0.50;
+         params.trailAtrMult = 1.20;
+         params.tradeStartHour = 7;
+         params.tradeEndHour = 19;
+         params.slippagePoints = 5;
+         params.maxDeviationPoints = 5;
+
+         params.lqSwingLookback = 32;
+         params.lqSweepBufferAtr = 0.11;
+         params.lqSweepMaxAgeBars = 4;
+         params.lqMinDisplacementAtr = 1.05;
+         params.lqStopBufferAtr = 0.26;
+         params.lqTpR = 1.00;
+         params.lqRetestMaxAgeBars = 2;
+         params.lqRetestTolAtr = 0.05;
+         params.lqAllowStopFallback = false;
+
+         params.shieldSpreadMaLen = 34;
+         params.shieldSpreadSpikeMult = 1.35;
+         params.shieldMaxSpreadPoints = 16;
+         params.shieldAtrShockMult = 1.60;
+         params.shieldCandleShockMult = 1.80;
+         params.shieldCooldownBars = 10;
+         params.shieldSlippageLimitPoints = 5;
+         break;
+
+      case CFG_SCALP_AGGRESSIVE:
+         params.atrPeriod = 12;
+         params.atrMaLen = 28;
+         params.atrFilterMult = 0.98;
+         params.maxSpreadAtrFrac = 0.12;
+         params.riskPct = 0.30;
+         params.maxTradesPerDay = 14;
+         params.maxConsecLosses = 4;
+         params.maxDailyDDPct = 3.0;
+         params.stopAtrMult = 0.75;
+         params.tpAtrMult = 1.10;
+         params.breakEvenAtrTrigger = 0.30;
+         params.breakEvenOffsetPoints = 4;
+         params.trailStartAtr = 0.50;
+         params.trailAtrMult = 1.05;
+         params.tradeStartHour = 6;
+         params.tradeEndHour = 21;
+         params.slippagePoints = 8;
+         params.maxDeviationPoints = 8;
+
+         params.lqSwingLookback = 24;
+         params.lqSweepBufferAtr = 0.09;
+         params.lqSweepMaxAgeBars = 6;
+         params.lqMinDisplacementAtr = 0.85;
+         params.lqStopBufferAtr = 0.22;
+         params.lqTpR = 1.10;
+         params.lqRetestMaxAgeBars = 4;
+         params.lqRetestTolAtr = 0.07;
+         params.lqAllowStopFallback = true;
+
+         params.shieldSpreadMaLen = 28;
+         params.shieldSpreadSpikeMult = 1.55;
+         params.shieldMaxSpreadPoints = 22;
+         params.shieldAtrShockMult = 1.80;
+         params.shieldCandleShockMult = 2.00;
+         params.shieldCooldownBars = 7;
+         params.shieldSlippageLimitPoints = 8;
+         break;
+
+      default:
+         break;
+   }
+}
+
 void ConfigureParams()
 {
    ZeroMemory(P);
@@ -797,6 +1366,11 @@ void ConfigureParams()
    P.slippagePoints = InpSlippagePoints;
    P.maxDeviationPoints = InpMaxDeviationPoints;
    P.onePosPerSymbol = InpOnePosPerSymbol;
+   P.useDynamicSpreadGate = InpUseDynamicSpreadGate;
+   P.spreadMedianLen = InpSpreadMedianLen;
+   P.spreadMedianMult = InpSpreadMedianMult;
+   P.stopSpreadBufferMult = InpStopSpreadBufferMult;
+   P.useTwoStepExecutionFallback = InpUseTwoStepExecutionFallback;
 
    P.lqSwingLookback = InpLqSwingLookback;
    P.lqSweepBufferAtr = InpLqSweepBufferAtr;
@@ -820,7 +1394,31 @@ void ConfigureParams()
    P.shieldCooldownBars = InpShieldCooldownBars;
    P.shieldSlippageLimitPoints = InpShieldSlippageLimitPoints;
 
-   if(InpUseProfilePreset)
+   P.useAtrRegimeGate = InpUseAtrRegimeGate;
+   P.regimeAtrMaLen = InpRegimeAtrMaLen;
+   P.regimeAtrMult = InpRegimeAtrMult;
+
+   P.useAutoPause = InpUseAutoPause;
+   P.autoPauseWindowTrades = InpAutoPauseWindowTrades;
+   P.autoPausePfStop = InpAutoPausePfStop;
+   P.autoPauseDdStopPct = InpAutoPauseDdStopPct;
+   P.autoPauseHours = InpAutoPauseHours;
+   P.autoPausePfResume = InpAutoPausePfResume;
+
+   P.useRiskLadder = InpUseRiskLadder;
+   P.riskLadderWindowTrades = InpRiskLadderWindowTrades;
+   P.riskLadderLowPf = InpRiskLadderLowPf;
+   P.riskLadderMidPf = InpRiskLadderMidPf;
+   P.riskLadderHighPf = InpRiskLadderHighPf;
+   P.riskLadderMidWinrate = InpRiskLadderMidWinrate;
+   P.riskLadderHighWinrate = InpRiskLadderHighWinrate;
+   P.riskLadderHighDdMaxPct = InpRiskLadderHighDdMaxPct;
+   P.riskLadderLowScale = InpRiskLadderLowScale;
+   P.riskLadderMidScale = InpRiskLadderMidScale;
+   P.riskLadderHighScale = InpRiskLadderHighScale;
+   P.riskLadderMaxScale = InpRiskLadderMaxScale;
+
+   if(g_useProfilePreset)
    {
       if(Profile == Safe)
       {
@@ -958,6 +1556,9 @@ void ConfigureParams()
       }
    }
 
+   if(InpConfigTemplate != CFG_MANUAL)
+      ApplyConfigTemplatePreset(P, InpConfigTemplate);
+
    if(P.tf != chartTf)
    {
       PrintFormat("Scalping timeframe clamp | chart=%s(%d) -> operacional=%s(%d)",
@@ -965,6 +1566,21 @@ void ConfigureParams()
                   (int)chartTf,
                   EnumToString(P.tf),
                   (int)P.tf);
+   }
+
+   if(InpTradingMode == TM_LIQUIDITY)
+   {
+      Mode = LiquidityScalp;
+      g_adaptiveEnabled = false;
+      g_lqEnabled = true;
+      Profile = Safe;
+   }
+   else
+   {
+      Mode = Adaptive;
+      g_adaptiveEnabled = true;
+      g_lqEnabled = false;
+      Profile = ProfileFromRegime(RegimeBase);
    }
 
    StrategyMode baseMode = Mode;
@@ -978,15 +1594,19 @@ void ConfigureParams()
 
 void LogConfig()
 {
-   PrintFormat("AplexFlow Engine | PROFILE=%s | MODE=%s | runtimeMode=%s",
+   PrintFormat("AplexFlow Engine | PROFILE=%s | TradingModeUI=%s | MODE=%s | runtimeMode=%s",
                RiskProfileToString(Profile),
+               TradingModeUIToString(InpTradingMode),
                StrategyModeToString(Mode),
                StrategyModeToString(g_runtimeMode));
-   PrintFormat("Controle de inputs | profilePreset=%s | modeForceModules=%s | tfSource=%s | clampM15=%s",
-               (InpUseProfilePreset ? "ON" : "OFF"),
+   PrintFormat("Controle de inputs | configTemplate=%s | modeForceModules=%s | tfSource=%s | clampM15=%s | spreadFilter=%s | lqEnabled=%s | adaptiveEnabled=%s",
+               ConfigTemplateToString(InpConfigTemplate),
                (InpModeForceModules ? "ON" : "OFF"),
                (InpUseChartTimeframe ? "chart" : "manual"),
-               (InpClampTimeframeToM15 ? "ON" : "OFF"));
+               (InpClampTimeframeToM15 ? "ON" : "OFF"),
+               (InpUseSpreadFilter ? "ON" : "OFF"),
+               (g_lqEnabled ? "ON" : "OFF"),
+               (g_adaptiveEnabled ? "ON" : "OFF"));
    Print("Perfil operacional: SCALPING");
 
    PrintFormat("Timeframe detectado | chart=%s(%d) | operacional=%s(%d)",
@@ -1010,7 +1630,7 @@ void LogConfig()
    PrintFormat("Risk profile interno | TF=%d | riskPct=%.2f | maxTrades/day=%d | maxConsecLosses=%d | maxDailyDD=%.2f%%",
                (int)P.tf, P.riskPct, P.maxTradesPerDay, P.maxConsecLosses, P.maxDailyDDPct);
 
-   PrintFormat("Execucao | TP=%s(%.2f ATR) | BreakEven=%s(%.2f ATR, %d pts) | Trail start=%.2f ATR, dist=%.2f ATR | deviation=%d pts",
+   PrintFormat("Execucao | TP=%s(%.2f ATR) | BreakEven=%s(%.2f ATR, %d pts) | Trail start=%.2f ATR, dist=%.2f ATR | deviation=%d pts | dynSpread=%s(len=%d,mult=%.2f) | stopSpreadBuf=%.2f | 2step=%s",
                (P.useTakeProfit ? "ON" : "OFF"),
                P.tpAtrMult,
                (P.useBreakEven ? "ON" : "OFF"),
@@ -1018,7 +1638,12 @@ void LogConfig()
                P.breakEvenOffsetPoints,
                P.trailStartAtr,
                P.trailAtrMult,
-               P.maxDeviationPoints);
+               P.maxDeviationPoints,
+               (P.useDynamicSpreadGate ? "ON" : "OFF"),
+               P.spreadMedianLen,
+               P.spreadMedianMult,
+               P.stopSpreadBufferMult,
+               (P.useTwoStepExecutionFallback ? "ON" : "OFF"));
 
    PrintFormat("Filtros de qualidade | minSlope=%.3f ATR | bodyBreakout=%.3f ATR | closeStrength=%.2f | maxSpread=%.2f ATR",
                P.minTrendStrengthAtr,
@@ -1053,6 +1678,58 @@ void LogConfig()
                P.shieldCandleShockMult,
                P.shieldCooldownBars,
                P.shieldSlippageLimitPoints);
+
+   PrintFormat("Regime gate | ATRGate=%s | atrMaLen=%d | atrMult=%.2f | autoPause=%s(window=%d,pfStop=%.2f,ddStop=%.2f%%,hours=%d,pfResume=%.2f)",
+               (P.useAtrRegimeGate ? "ON" : "OFF"),
+               P.regimeAtrMaLen,
+               P.regimeAtrMult,
+               (P.useAutoPause ? "ON" : "OFF"),
+               P.autoPauseWindowTrades,
+               P.autoPausePfStop,
+               P.autoPauseDdStopPct,
+               P.autoPauseHours,
+               P.autoPausePfResume);
+   PrintFormat("Risk ladder | enabled=%s | window=%d | lowPf=%.2f midPf=%.2f highPf=%.2f | scales=%.2f/%.2f/%.2f | maxScale=%.2f",
+               (P.useRiskLadder ? "ON" : "OFF"),
+               P.riskLadderWindowTrades,
+               P.riskLadderLowPf,
+               P.riskLadderMidPf,
+               P.riskLadderHighPf,
+               P.riskLadderLowScale,
+               P.riskLadderMidScale,
+               P.riskLadderHighScale,
+               P.riskLadderMaxScale);
+   PrintFormat("Execution profile dinamico | ativo=%s | current=%s | confirmBars=3 | lockBars=6",
+               (IsXauUsdM5ManagedTemplate(InpConfigTemplate) ? "ON" : "OFF"),
+               ExecProfileToString(g_execProfile));
+   if(IsLive247LiquidityTemplate())
+      PrintFormat("Live247 overlay | current=%s | confirmBars=2 | lockBars=8",
+                  Live247ProfileToString(g_live247Profile));
+}
+
+void LogSymbolExecutionSpec()
+{
+   const int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
+   const double point = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
+   const double tickSize = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+   const long stopLevelPts = SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL);
+   const long freezeLevelPts = SymbolInfoInteger(_Symbol, SYMBOL_TRADE_FREEZE_LEVEL);
+   const double spreadPts = CurrentSpreadPoints();
+   const double spreadPrice = CurrentSpreadPrice();
+   const double minProtectPrice = ComputeMinProtectionDistancePrice();
+   const double minProtectPts = PriceDistanceToPoints(minProtectPrice);
+
+   LogAndPersist(StringFormat("[SYMBOL_SPEC] symbol=%s | digits=%d | point=%.5f | tickSize=%.5f | stopLevel=%d pts | freezeLevel=%d pts | spreadNow=%.1f pts (%.5f) | stopSpreadBuf=%.2f | minProtect=%.1f pts",
+                              _Symbol,
+                              digits,
+                              point,
+                              tickSize,
+                              (int)stopLevelPts,
+                              (int)freezeLevelPts,
+                              spreadPts,
+                              spreadPrice,
+                              P.stopSpreadBufferMult,
+                              minProtectPts));
 }
 
 void ResetTelemetryForDay(const datetime anchor)
@@ -1075,6 +1752,8 @@ void PrintDailyTelemetry(const string reason)
                          + g_tel.shieldBlocksATR
                          + g_tel.shieldBlocksCandle
                          + g_tel.shieldBlocksSlippage
+                         + g_tel.regimeBlocks
+                         + g_tel.autoPauseBlocks
                          + g_tel.killSwitchBlocks;
 
    string topBlocker = "none";
@@ -1083,6 +1762,8 @@ void PrintDailyTelemetry(const string reason)
    if(g_tel.shieldBlocksATR > topCount) { topCount = g_tel.shieldBlocksATR; topBlocker = "atr"; }
    if(g_tel.shieldBlocksCandle > topCount) { topCount = g_tel.shieldBlocksCandle; topBlocker = "candle"; }
    if(g_tel.shieldBlocksSlippage > topCount) { topCount = g_tel.shieldBlocksSlippage; topBlocker = "slippage"; }
+   if(g_tel.regimeBlocks > topCount) { topCount = g_tel.regimeBlocks; topBlocker = "regime"; }
+   if(g_tel.autoPauseBlocks > topCount) { topCount = g_tel.autoPauseBlocks; topBlocker = "autopause"; }
    if(g_tel.killSwitchBlocks > topCount) { topCount = g_tel.killSwitchBlocks; topBlocker = "kill"; }
 
    const string telSummary = StringFormat("[TEL] reason=%s | day=%s | opened=%d | closed=%d | wins=%d | losses=%d | winrate=%.2f%% | net=%.2f | grossProfit=%.2f | grossLoss=%.2f",
@@ -1111,21 +1792,47 @@ void PrintDailyTelemetry(const string reason)
                                      convMssTrade);
    LogAndPersist(telLq);
 
-   const string telShield = StringFormat("[TEL] shield | spread=%d | atr=%d | candle=%d | slippage=%d",
+   const string telShield = StringFormat("[TEL] shield | spread=%d | atr=%d | candle=%d | slippage=%d | regime=%d | autoPauseBlocks=%d | autoPauseTriggers=%d",
                                          g_tel.shieldBlocksSpread,
                                          g_tel.shieldBlocksATR,
                                          g_tel.shieldBlocksCandle,
-                                         g_tel.shieldBlocksSlippage);
+                                         g_tel.shieldBlocksSlippage,
+                                         g_tel.regimeBlocks,
+                                         g_tel.autoPauseBlocks,
+                                         g_tel.autoPauseTriggers);
    LogAndPersist(telShield);
+
+   double perfPf = 1.0;
+   double perfWr = 0.50;
+   double perfDd = 0.0;
+   int perfSamples = 0;
+   const int perfWindow = MathMax(MathMax(5, P.autoPauseWindowTrades), MathMax(5, P.riskLadderWindowTrades));
+   const bool perfOk = ComputeRecentPerformance(perfWindow, perfPf, perfWr, perfDd, perfSamples);
+   const string telPerf = StringFormat("[TEL] perf | window=%d | samples=%d | pf=%.2f | winrate=%.2f%% | ddLocal=%.2f%% | autoPauseActive=%s",
+                                       perfWindow,
+                                       perfSamples,
+                                       perfPf,
+                                       perfWr * 100.0,
+                                       perfDd,
+                                       (g_autoPauseUntil > CurrentTimeSafe() ? "true" : "false"));
+   if(perfOk)
+      LogAndPersist(telPerf);
+   else
+      LogAndPersist("[TEL] perf | sem amostra suficiente para estatistica recente.");
 
    const string killAt = (g_tel.killSwitchTriggeredAt > 0
                           ? TimeToString(g_tel.killSwitchTriggeredAt, TIME_DATE | TIME_MINUTES | TIME_SECONDS)
                           : "-");
-   const string telBlocks = StringFormat("[TEL] blocks | total=%d | killSwitchTriggered=%s | killAt=%s | killBlocks=%d | top=%s(%d)",
+   const string autoPauseUntil = (g_autoPauseUntil > 0
+                                  ? TimeToString(g_autoPauseUntil, TIME_DATE | TIME_MINUTES)
+                                  : "-");
+   const string telBlocks = StringFormat("[TEL] blocks | total=%d | killSwitchTriggered=%s | killAt=%s | killBlocks=%d | autoPauseUntil=%s | autoPauseTriggers=%d | top=%s(%d)",
                                          totalBlocks,
                                          (g_tel.killSwitchTriggered ? "true" : "false"),
                                          killAt,
                                          g_tel.killSwitchBlocks,
+                                         autoPauseUntil,
+                                         g_tel.autoPauseTriggers,
                                          topBlocker,
                                          topCount);
    LogAndPersist(telBlocks);
@@ -1168,6 +1875,11 @@ void ResetDailyCounters(const bool force)
    g_lastRegimeChangeBar = 0;
    g_shieldBlockedUntil = 0;
    g_lastExecSlippagePoints = 0.0;
+   g_execProfile = EP_NORMAL;
+   g_execProfileLockBars = 0;
+   g_execProfileNormConfirm = 0;
+   g_execProfileAggrConfirm = 0;
+   g_execProfileDefConfirm = 0;
    P = g_baseParams;
    g_runtimeMode = (Mode == Adaptive ? Pullback : Mode);
    if(InpModeForceModules)
@@ -1265,6 +1977,9 @@ double CurrentSpreadPrice()
 
 bool IsSpreadAcceptable(const double atr)
 {
+   if(!InpUseSpreadFilter)
+      return true;
+
    if(P.maxSpreadAtrFrac <= 0.0)
       return true;
    if(atr <= 0.0)
@@ -1290,6 +2005,25 @@ bool IsSpreadAcceptable(const double atr)
       return false;
    }
 
+   if(P.useDynamicSpreadGate)
+   {
+      const double spreadPoints = CurrentSpreadPoints();
+      const double medianPoints = SpreadMedianPoints(P.spreadMedianLen, 1);
+      const double mult = MathMax(1.0, P.spreadMedianMult);
+      const double limitPoints = medianPoints * mult;
+      if(spreadPoints > limitPoints)
+      {
+         g_tel.shieldBlocksSpread++;
+         LogBlockThrottled("Bloqueio: spread dinamico alto",
+                           StringFormat("spread=%.1f pts | median=%.1f pts | mult=%.2f | limit=%.1f pts",
+                                        spreadPoints,
+                                        medianPoints,
+                                        mult,
+                                        limitPoints));
+         return false;
+      }
+   }
+
    return true;
 }
 
@@ -1300,6 +2034,14 @@ double CurrentSpreadPoints()
       return 0.0;
 
    return (CurrentSpreadPrice() / point);
+}
+
+double PriceDistanceToPoints(const double distancePrice)
+{
+   const double point = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
+   if(point <= 0.0)
+      return 0.0;
+   return (distancePrice / point);
 }
 
 double SpreadMAPoints(const int len, const int startShift)
@@ -1321,6 +2063,36 @@ double SpreadMAPoints(const int len, const int startShift)
       return CurrentSpreadPoints();
 
    return (acc / (double)count);
+}
+
+double SpreadMedianPoints(const int len, const int startShift)
+{
+   const int useLen = MathMax(5, len);
+   double values[];
+   ArrayResize(values, useLen);
+
+   int count = 0;
+   for(int i = startShift; i < startShift + useLen; i++)
+   {
+      const long sp = iSpread(_Symbol, P.tf, i);
+      if(sp < 0)
+         continue;
+      values[count] = (double)sp;
+      count++;
+   }
+
+   if(count <= 0)
+      return CurrentSpreadPoints();
+
+   ArrayResize(values, count);
+   ArraySort(values);
+
+   if((count % 2) == 1)
+      return values[count / 2];
+
+   const int hi = count / 2;
+   const int lo = hi - 1;
+   return ((values[lo] + values[hi]) * 0.5);
 }
 
 int CooldownBarsRemaining(const datetime blockedUntil)
@@ -1485,11 +2257,28 @@ double ComputeEffectiveRiskPct(const double softRiskMult, double &winrate, doubl
 
    const double baseRisk = P.riskPct;
    const double softMult = ClampValue(softRiskMult, 0.25, 1.50);
-   double effRisk = baseRisk * factor * softMult;
-   if(effRisk > baseRisk)
-      effRisk = baseRisk;
+   double perfPf = 1.0, perfWr = 0.50, perfDdPct = 0.0;
+   int perfSamples = 0;
+   const double perfScale = ComputePerformanceRiskScale(perfPf, perfWr, perfDdPct, perfSamples);
+
+   double effRisk = baseRisk * factor * softMult * perfScale;
+   const double capScale = (P.useRiskLadder ? MathMax(1.0, P.riskLadderMaxScale) : 1.0);
+   const double riskCap = baseRisk * capScale;
+   if(effRisk > riskCap)
+      effRisk = riskCap;
    if(Profile == Aggressive && effRisk > 1.25)
       effRisk = 1.25;
+
+   if(IsDebugAtLeast(DBG_VERBOSE) && P.useRiskLadder)
+   {
+      DebugLog(DBG_VERBOSE,
+               StringFormat("[RISK_LADDER] scale=%.3f | pf=%.2f | winrate=%.2f%% | ddLocal=%.2f%% | samples=%d",
+                            perfScale,
+                            perfPf,
+                            perfWr * 100.0,
+                            perfDdPct,
+                            perfSamples));
+   }
 
    return effRisk;
 }
@@ -1500,6 +2289,9 @@ int ResolveLiquidityEntryMode(const SoftAdjustments &soft)
    if(mode < MARKET_ON_MSS || mode > HYBRID)
       mode = HYBRID;
 
+   if(mode == HYBRID)
+      return HYBRID;
+
    if(!soft.preferLimitEntry)
       return mode;
 
@@ -1507,6 +2299,35 @@ int ResolveLiquidityEntryMode(const SoftAdjustments &soft)
       return HYBRID;
 
    return LIMIT_RETEST;
+}
+
+double ComputeLiquidityRetestPrice(const int direction, const double swingLevel, const double atr)
+{
+   const double tol = atr * MathMax(0.01, P.lqRetestTolAtr);
+   const double offset = 2.5 * tol;
+   const double rawPrice = (direction > 0 ? swingLevel + offset : swingLevel - offset);
+   return NormalizePrice(rawPrice);
+}
+
+int ComputeDynamicPendingMaxAge(const double atr, const int direction, const double pendingPrice)
+{
+   const int base = MathMax(1, P.lqRetestMaxAgeBars);
+   if(atr <= 0.0 || direction == 0 || pendingPrice <= 0.0)
+      return base;
+
+   const double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   const double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   if(ask <= 0.0 || bid <= 0.0)
+      return base;
+
+   const double dist = (direction > 0 ? (ask - pendingPrice) : (pendingPrice - bid));
+   if(dist <= 0.0)
+      return base;
+
+   const double distAtr = dist / atr;
+   const double speedAtrPerBar = 0.35;
+   const int needBars = (int)MathCeil(distAtr / speedAtrPerBar);
+   return (int)ClampValue((double)MathMax(base, needBars), (double)base, 30.0);
 }
 
 bool DetectLiquiditySweep(const double atr, int &direction, double &swingLevel, double &sweepExtreme)
@@ -1964,6 +2785,299 @@ void ApplySoftAdjustments(const double score, SoftAdjustments &outAdjust)
                          outAdjust.tpRMult));
 }
 
+double ComputeLive247OpportunityScore(const double atr,
+                                      const double pascalAtr,
+                                      const double slope,
+                                      const int trendDir,
+                                      double &adxOut,
+                                      double &spreadRatioOut,
+                                      double &volRatioOut)
+{
+   adxOut = GetADXMain(1);
+   if(adxOut == EMPTY_VALUE || adxOut < 0.0)
+      adxOut = 0.0;
+
+   const double spreadMedian = SpreadMedianPoints(MathMax(50, P.spreadMedianLen), 1);
+   const double spreadNow = CurrentSpreadPoints();
+   spreadRatioOut = (spreadMedian > 0.0 ? spreadNow / spreadMedian : 1.0);
+   volRatioOut = (pascalAtr > 0.0 ? atr / pascalAtr : 1.0);
+
+   double score = 0.0;
+   int parts = 0;
+
+   score += (trendDir != 0 ? 1.0 : 0.0);
+   parts++;
+
+   const double trendStrength = (atr > 0.0 ? MathAbs(slope) / atr : 0.0);
+   score += ClampValue((trendStrength - 0.035) / 0.030, 0.0, 1.0);
+   parts++;
+
+   score += ClampValue((adxOut - 18.0) / 12.0, 0.0, 1.0);
+   parts++;
+
+   if(spreadRatioOut <= 1.0)
+      score += 1.0;
+   else
+      score += ClampValue(1.0 - ((spreadRatioOut - 1.0) / 0.50), 0.0, 1.0);
+   parts++;
+
+   score += ClampValue(1.0 - (MathAbs(volRatioOut - 1.18) / 0.50), 0.0, 1.0);
+   parts++;
+
+   const double hurst = CalcHurstRS(72, 1);
+   if(hurst != EMPTY_VALUE)
+   {
+      score += ClampValue((hurst - 0.50) / 0.10, 0.0, 1.0);
+      parts++;
+   }
+
+   const double entropy = CalcDirectionEntropy(MathMax(32, P.entropyLen), 1);
+   if(entropy != EMPTY_VALUE)
+   {
+      score += ClampValue((0.82 - entropy) / 0.20, 0.0, 1.0);
+      parts++;
+   }
+
+   const double autocorr = CalcAutocorrLag1(MathMax(24, P.autocorrLen), 1);
+   if(autocorr != EMPTY_VALUE)
+   {
+      score += ClampValue((MathAbs(autocorr) - 0.08) / 0.12, 0.0, 1.0);
+      parts++;
+   }
+
+   if(parts <= 0)
+      return 0.0;
+
+   return ClampValue(score / (double)parts, 0.0, 1.0);
+}
+
+double PascalMA_CloseTF(const ENUM_TIMEFRAMES tf, const int pascalLen, const int shift)
+{
+   double w[];
+   if(!BuildPascalWeights(pascalLen, w))
+      return EMPTY_VALUE;
+
+   double acc = 0.0;
+   for(int i = 0; i < pascalLen; i++)
+   {
+      const double c = iClose(_Symbol, tf, shift + i);
+      if(c <= 0.0)
+         return EMPTY_VALUE;
+      acc += c * w[i];
+   }
+   return acc;
+}
+
+int TrendDirectionTF(const ENUM_TIMEFRAMES tf, const int pascalLen, double &slope)
+{
+   const double ma1 = PascalMA_CloseTF(tf, pascalLen, 1);
+   const double ma2 = PascalMA_CloseTF(tf, pascalLen, 2);
+
+   if(ma1 == EMPTY_VALUE || ma2 == EMPTY_VALUE)
+   {
+      slope = 0.0;
+      return 0;
+   }
+
+   slope = (ma1 - ma2);
+   if(slope > 0.0)
+      return 1;
+   if(slope < 0.0)
+      return -1;
+   return 0;
+}
+
+double ATR_OnTF(const ENUM_TIMEFRAMES tf, const int len, const int shift)
+{
+   const int useLen = MathMax(3, len);
+   double sum = 0.0;
+   int count = 0;
+
+   for(int i = shift; i < shift + useLen; i++)
+   {
+      const double h = iHigh(_Symbol, tf, i);
+      const double l = iLow(_Symbol, tf, i);
+      const double cp = iClose(_Symbol, tf, i + 1);
+      if(h <= 0.0 || l <= 0.0 || cp <= 0.0)
+         continue;
+
+      const double tr1 = h - l;
+      const double tr2 = MathAbs(h - cp);
+      const double tr3 = MathAbs(l - cp);
+      sum += MathMax(tr1, MathMax(tr2, tr3));
+      count++;
+   }
+
+   if(count <= 0)
+      return EMPTY_VALUE;
+
+   return (sum / (double)count);
+}
+
+void ApplyLive247LiquidityProfile(Params &params, const int profile)
+{
+   if(!IsLive247LiquidityTemplate())
+      return;
+
+   if(profile != L247_PUSH)
+      return;
+
+   params.riskPct = 0.45;
+   params.maxTradesPerDay = 50;
+   params.maxConsecLosses = 4;
+   params.maxDailyDDPct = 4.0;
+
+   params.atrFilterMult = 0.78;
+   params.useSessionFilter = true;
+   params.tradeStartHour = 7;
+   params.tradeEndHour = 20;
+   params.onePosPerSymbol = true;
+
+   params.useDynamicSpreadGate = true;
+   params.maxSpreadAtrFrac = 0.24;
+   params.spreadMedianMult = 2.10;
+   params.slippagePoints = 18;
+   params.maxDeviationPoints = 18;
+
+   params.lqSwingLookback = 8;
+   params.lqSweepBufferAtr = 0.04;
+   params.lqSweepMaxAgeBars = 5;
+   params.lqMinDisplacementAtr = 0.45;
+   params.lqMssLookback = 3;
+   params.lqStopBufferAtr = 0.28;
+   params.lqTpR = 1.28;
+   params.lqEntryMode = HYBRID;
+   params.lqRetestMaxAgeBars = 2;
+   params.lqRetestTolAtr = 0.08;
+   params.lqAllowStopFallback = true;
+   params.lqUseStructuralTrail = true;
+   params.lqStructuralTrailAtr = 0.24;
+
+   params.useBreakEven = false;
+   params.trailStartAtr = 1.10;
+   params.trailAtrMult = 1.00;
+
+   params.useAtrRegimeGate = false;
+   params.useAutoPause = false;
+
+   params.shieldSpreadSpikeMult = 2.30;
+   params.shieldMaxSpreadPoints = 80;
+   params.shieldAtrShockMult = 2.40;
+   params.shieldCandleShockMult = 3.20;
+   params.shieldCooldownBars = 1;
+   params.shieldSlippageLimitPoints = 18;
+}
+
+void UpdateLive247LiquidityProfile(const double atr,
+                                   const double pascalAtr,
+                                   const double slope,
+                                   const int trendDir)
+{
+   if(!IsLive247LiquidityTemplate())
+   {
+      g_live247Profile = L247_BASE;
+      g_live247ProfileLockBars = 0;
+      g_live247ProfileBaseConfirm = 0;
+      g_live247ProfilePushConfirm = 0;
+      return;
+   }
+
+   double adx = 0.0;
+   double spreadRatio = 1.0;
+   double volRatio = 1.0;
+   const double score = ComputeLive247OpportunityScore(atr, pascalAtr, slope, trendDir, adx, spreadRatio, volRatio);
+
+   const double trendStrength = (atr > 0.0 ? MathAbs(slope) / atr : 0.0);
+   double m15Slope = 0.0;
+   double h1Slope = 0.0;
+   const int m15Dir = TrendDirectionTF(PERIOD_M15, MathMax(3, P.pascalLenPrice), m15Slope);
+   const int h1Dir = TrendDirectionTF(PERIOD_H1, MathMax(3, P.pascalLenPrice), h1Slope);
+   const double m15Atr = ATR_OnTF(PERIOD_M15, 14, 1);
+   const double h1Atr = ATR_OnTF(PERIOD_H1, 14, 1);
+   const double m15TrendStrength = (m15Atr > 0.0 ? MathAbs(m15Slope) / m15Atr : 0.0);
+   const double h1TrendStrength = (h1Atr > 0.0 ? MathAbs(h1Slope) / h1Atr : 0.0);
+   const bool macroAligned = (trendDir != 0 && trendDir == m15Dir && h1Dir != -trendDir);
+   const bool macroStrong = (m15TrendStrength >= 0.025 && h1TrendStrength >= 0.015);
+
+   const bool pushCond = (trendDir != 0 &&
+                          macroAligned &&
+                          macroStrong &&
+                          trendStrength >= 0.080 &&
+                          adx >= 28.0 &&
+                          spreadRatio <= 1.20 &&
+                          volRatio >= 0.96 &&
+                          volRatio <= 1.45 &&
+                          score >= 0.70);
+   const bool baseCond = (!pushCond &&
+                          (!macroAligned ||
+                           !macroStrong ||
+                           score <= 0.60 ||
+                           trendDir == 0 ||
+                           adx < 20.0 ||
+                           spreadRatio > 1.35 ||
+                           volRatio > 1.65));
+
+   if(pushCond)
+   {
+      g_live247ProfilePushConfirm++;
+      g_live247ProfileBaseConfirm = 0;
+   }
+   else if(baseCond)
+   {
+      g_live247ProfileBaseConfirm++;
+      g_live247ProfilePushConfirm = 0;
+   }
+   else
+   {
+      g_live247ProfileBaseConfirm = 0;
+      g_live247ProfilePushConfirm = 0;
+   }
+
+   if(g_live247ProfileLockBars > 0)
+      g_live247ProfileLockBars--;
+
+   int targetProfile = g_live247Profile;
+   if(g_live247ProfileLockBars <= 0)
+   {
+      if(g_live247ProfilePushConfirm >= 2)
+         targetProfile = L247_PUSH;
+      else if(g_live247ProfileBaseConfirm >= 2)
+         targetProfile = L247_BASE;
+   }
+
+   if(targetProfile != g_live247Profile)
+   {
+      const int oldProfile = g_live247Profile;
+      g_live247Profile = targetProfile;
+      g_live247ProfileLockBars = 8;
+      g_live247ProfileBaseConfirm = 0;
+      g_live247ProfilePushConfirm = 0;
+
+      LogAndPersist(StringFormat("[L247] switch %s -> %s | score=%.2f | trend=%.3f | adx=%.1f | spreadRatio=%.2f | volRatio=%.2f",
+                                 Live247ProfileToString(oldProfile),
+                                 Live247ProfileToString(g_live247Profile),
+                                 score,
+                                 trendStrength,
+                                 adx,
+                                 spreadRatio,
+                                 volRatio));
+   }
+
+   ApplyLive247LiquidityProfile(P, g_live247Profile);
+
+   DebugLog(DBG_VERBOSE,
+            StringFormat("[L247] state=%s | lock=%d | score=%.2f | trend=%.3f | m15=%.3f | h1=%.3f | adx=%.1f | spreadRatio=%.2f | volRatio=%.2f",
+                         Live247ProfileToString(g_live247Profile),
+                         g_live247ProfileLockBars,
+                         score,
+                         trendStrength,
+                         m15TrendStrength,
+                         h1TrendStrength,
+                         adx,
+                         spreadRatio,
+                         volRatio));
+}
+
 bool EvaluateLiquidityScalpSignal(const double atr,
                                   const SoftAdjustments &soft,
                                   int &direction,
@@ -2045,7 +3159,29 @@ bool EvaluateLiquidityScalpSignal(const double atr,
       double micro = 0.0;
       bool usedFallback = false;
       if(!ConfirmLiquidityMSS(g_lq.direction, P.lqMssLookback, 2, micro, usedFallback))
-         return false;
+      {
+         const double minDisp = P.lqMinDisplacementAtr * soft.displacementMult;
+         const bool strongFallback = (g_lq.barsSinceSweep >= 1 &&
+                                      g_lq.displacementSizeAtr >= (minDisp * 1.25));
+         if(!strongFallback)
+            return false;
+
+         BuildLiquidityTradeLevels(g_lq.direction, atr, soft, 0.0, g_lq.entryPrice, g_lq.slPrice, g_lq.tpPrice);
+         direction = g_lq.direction;
+         entryPrice = g_lq.entryPrice;
+         stop = g_lq.slPrice;
+         target = g_lq.tpPrice;
+         origin = "LiquidityScalp Displacement Fallback";
+         g_tel.lqSignalsFound++;
+         g_tel.lqHybridFallbackMarket++;
+         DebugLog(DBG_SIGNALS,
+                  StringFormat("[LQ_DISP_FALLBACK] dir=%d | disp=%.2f ATR | min=%.2f ATR | barsSinceSweep=%d",
+                               g_lq.direction,
+                               g_lq.displacementSizeAtr,
+                               minDisp,
+                               g_lq.barsSinceSweep));
+         return true;
+      }
 
       g_lq.state = LQ_MSS;
       g_lq.microLevel = micro;
@@ -2056,7 +3192,7 @@ bool EvaluateLiquidityScalpSignal(const double atr,
       const double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
       const double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
       const double tol = atr * MathMax(0.01, P.lqRetestTolAtr);
-      g_lq.pendingPrice = g_lq.swingLevel;
+      g_lq.pendingPrice = ComputeLiquidityRetestPrice(g_lq.direction, g_lq.swingLevel, atr);
 
       const double distToRetest = (g_lq.direction > 0
                                    ? (ask - g_lq.pendingPrice)
@@ -2131,7 +3267,9 @@ bool EvaluateLiquidityScalpSignal(const double atr,
       const double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
       const double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
       const double tol = atr * MathMax(0.01, P.lqRetestTolAtr);
-      const double pendingPx = (g_lq.pendingPrice > 0.0 ? g_lq.pendingPrice : g_lq.swingLevel);
+      const double pendingPx = (g_lq.pendingPrice > 0.0
+                                ? g_lq.pendingPrice
+                                : ComputeLiquidityRetestPrice(g_lq.direction, g_lq.swingLevel, atr));
       const double distToRetest = (g_lq.direction > 0
                                    ? (ask - pendingPx)
                                    : (pendingPx - bid));
@@ -2259,7 +3397,8 @@ int EvaluateMarketRegime(const double atr,
 void BuildAdaptiveParamsForRegime(const int regime, const StrategyMode strategyMode, Params &outP)
 {
    outP = g_baseParams;
-   if(InpModeForceModules)
+   // No modo Adaptive, o runtime mode precisa efetivamente trocar os modulos.
+   if(Mode == Adaptive || InpModeForceModules)
       ApplyStrategyModeToParams(outP, strategyMode);
 
    double riskMult = 1.0;
@@ -2363,6 +3502,14 @@ void UpdateAdaptiveParams(const double atr, const double pascalAtr, const double
       return;
    }
 
+   if(!g_adaptiveEnabled)
+   {
+      g_runtimeMode = Pullback;
+      if(InpModeForceModules)
+         ApplyStrategyModeToParams(P, g_runtimeMode);
+      return;
+   }
+
    const double spread = CurrentSpreadPrice();
    const double spreadFrac = (atr > 0.0 ? spread / atr : 0.0);
    const int outcomeSamples = ArraySize(g_outcomes);
@@ -2423,12 +3570,38 @@ void UpdateAdaptiveParams(const double atr, const double pascalAtr, const double
    if(nextMode != g_runtimeMode)
    {
       const StrategyMode oldMode = g_runtimeMode;
+      const bool preservePullbackSetup = (g_setup.active &&
+                                          StrategyModeUsesPullbackSetup(oldMode) &&
+                                          StrategyModeUsesPullbackSetup(nextMode));
       g_runtimeMode = nextMode;
-      ResetPullbackSetup("Troca de modo adaptativo");
+      if(!preservePullbackSetup)
+      {
+         ResetPullbackSetup("Troca de modo adaptativo");
+      }
+      else
+      {
+         PrintFormat("Setup Fibonacci preservado | modo=%s -> %s | dir=%d | barras=%d/%d",
+                     StrategyModeToString(oldMode),
+                     StrategyModeToString(g_runtimeMode),
+                     g_setup.direction,
+                     g_setup.barsElapsed,
+                     P.fiboMaxBarsToTrigger);
+      }
       PrintFormat("Adaptive mode switch | %s -> %s | regime=%s",
                   StrategyModeToString(oldMode),
                   StrategyModeToString(g_runtimeMode),
                   MarketRegimeToString(g_activeRegime));
+   }
+
+   const RiskProfile newProfile = ProfileFromRegime(g_activeRegime);
+   if(newProfile != Profile)
+   {
+      const RiskProfile oldProfile = Profile;
+      Profile = newProfile;
+      LogAndPersist(StringFormat("[PROFILE_INTERNAL] %s -> %s | regime=%s",
+                                 RiskProfileToString(oldProfile),
+                                 RiskProfileToString(Profile),
+                                 MarketRegimeToString(g_activeRegime)));
    }
 
    BuildAdaptiveParamsForRegime(g_activeRegime, g_runtimeMode, P);
@@ -2564,6 +3737,7 @@ bool TryUpdateOutcomeFromClosedPosition(const long positionId)
 
    const bool win = (profit > 0.0);
    AppendOutcome(win ? 1 : 0);
+   AppendClosedPnl(profit);
 
    if(win)
       g_consecLosses = 0;
@@ -2585,6 +3759,10 @@ int RequiredBars()
    n = MathMax(n, P.autocorrLen + 10);
    n = MathMax(n, P.pascalLenPrice + 10);
    n = MathMax(n, P.pascalLenATR + 10);
+   if(P.useAtrRegimeGate)
+      n = MathMax(n, P.regimeAtrMaLen + 10);
+   if(P.useDynamicSpreadGate)
+      n = MathMax(n, P.spreadMedianLen + 10);
    return n;
 }
 
@@ -2601,6 +3779,38 @@ double GetATR(const int shift)
    double buf[];
    ArraySetAsSeries(buf, true);
    if(CopyBuffer(g_atrHandle, 0, shift, 1, buf) != 1)
+      return EMPTY_VALUE;
+
+   return buf[0];
+}
+
+double ATR_SMA_Long(const int len, const int shift)
+{
+   const int useLen = MathMax(1, len);
+   if(g_atrHandle == INVALID_HANDLE)
+      return EMPTY_VALUE;
+
+   double buf[];
+   ArrayResize(buf, useLen);
+   ArraySetAsSeries(buf, true);
+   if(CopyBuffer(g_atrHandle, 0, shift, useLen, buf) < useLen)
+      return EMPTY_VALUE;
+
+   double sum = 0.0;
+   for(int i = 0; i < useLen; i++)
+      sum += buf[i];
+
+   return (sum / (double)useLen);
+}
+
+double GetADXMain(const int shift)
+{
+   if(g_adxHandle == INVALID_HANDLE)
+      return EMPTY_VALUE;
+
+   double buf[];
+   ArraySetAsSeries(buf, true);
+   if(CopyBuffer(g_adxHandle, 0, shift, 1, buf) != 1)
       return EMPTY_VALUE;
 
    return buf[0];
@@ -3075,6 +4285,90 @@ void AppendOutcome(const int win)
    ArrayResize(g_outcomes, keep);
 }
 
+void AppendClosedPnl(const double pnl)
+{
+   const int oldSize = ArraySize(g_closedPnls);
+   ArrayResize(g_closedPnls, oldSize + 1);
+   g_closedPnls[oldSize] = pnl;
+
+   const int keep = 2000;
+   const int now = ArraySize(g_closedPnls);
+   if(now <= keep)
+      return;
+
+   const int drop = now - keep;
+   for(int i = 0; i < keep; i++)
+      g_closedPnls[i] = g_closedPnls[i + drop];
+
+   ArrayResize(g_closedPnls, keep);
+}
+
+bool ComputeRecentPerformance(const int windowTrades,
+                              double &pf,
+                              double &winrate,
+                              double &localDdPct,
+                              int &samples)
+{
+   pf = 1.0;
+   winrate = 0.50;
+   localDdPct = 0.0;
+   samples = 0;
+
+   const int nAll = ArraySize(g_closedPnls);
+   if(nAll <= 0)
+      return false;
+
+   const int window = MathMax(1, windowTrades);
+   const int n = MathMin(window, nAll);
+   const int start = nAll - n;
+   samples = n;
+
+   double grossProfit = 0.0;
+   double grossLossAbs = 0.0;
+   int wins = 0;
+
+   double equityCurve = 0.0;
+   double peakCurve = 0.0;
+   double maxDdCash = 0.0;
+
+   for(int i = start; i < nAll; i++)
+   {
+      const double pnl = g_closedPnls[i];
+      if(pnl > 0.0)
+      {
+         grossProfit += pnl;
+         wins++;
+      }
+      else if(pnl < 0.0)
+      {
+         grossLossAbs += (-pnl);
+      }
+
+      equityCurve += pnl;
+      if(equityCurve > peakCurve)
+         peakCurve = equityCurve;
+
+      const double ddNow = peakCurve - equityCurve;
+      if(ddNow > maxDdCash)
+         maxDdCash = ddNow;
+   }
+
+   winrate = ((double)wins / (double)n);
+   if(grossLossAbs > 0.0)
+      pf = grossProfit / grossLossAbs;
+   else if(grossProfit > 0.0)
+      pf = 99.0;
+
+   double equityRef = AccountInfoDouble(ACCOUNT_EQUITY);
+   if(equityRef <= 0.0)
+      equityRef = AccountInfoDouble(ACCOUNT_BALANCE);
+   if(equityRef <= 0.0)
+      equityRef = 1.0;
+
+   localDdPct = (maxDdCash / equityRef) * 100.0;
+   return true;
+}
+
 double RollingWinrate()
 {
    const int nAll = ArraySize(g_outcomes);
@@ -3115,7 +4409,9 @@ double CalcVolumeByRisk(const double riskPct, const double entryPrice, const dou
 
    const double riskMoney = equity * riskPct * 0.01;
 
-   const double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+   double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE_LOSS);
+   if(tickValue <= 0.0)
+      tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
    const double tickSize  = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
    if(tickValue <= 0.0 || tickSize <= 0.0)
       return 0.0;
@@ -3132,12 +4428,23 @@ double CalcVolumeByRisk(const double riskPct, const double entryPrice, const dou
    return NormalizeVolume(rawLot);
 }
 
-double EnforceStopDistance(const int direction, const double entry, double stop)
+double ComputeMinProtectionDistancePrice()
 {
    const double point = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
-   const double stopLevel = (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * point;
-   const double freezeLevel = (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_FREEZE_LEVEL) * point;
-   const double minDist = MathMax(stopLevel, freezeLevel);
+   if(point <= 0.0)
+      return 0.0;
+
+   const double stopLevelPts = (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL);
+   const double freezeLevelPts = (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_FREEZE_LEVEL);
+   const double spreadPts = CurrentSpreadPoints();
+   const double spreadBufferPts = MathMax(0.0, spreadPts * MathMax(0.0, P.stopSpreadBufferMult));
+   const double minDistPts = MathMax(1.0, stopLevelPts + freezeLevelPts + spreadBufferPts);
+   return (minDistPts * point);
+}
+
+double EnforceStopDistance(const int direction, const double entry, double stop)
+{
+   const double minDist = ComputeMinProtectionDistancePrice();
 
    if(direction > 0)
    {
@@ -3155,9 +4462,7 @@ double EnforceStopDistance(const int direction, const double entry, double stop)
 
 double EnforceTargetDistance(const int direction, const double entry, double target)
 {
-   const double point = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
-   const double stopLevel = (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * point;
-   const double minDist = MathMax(stopLevel, point);
+   const double minDist = ComputeMinProtectionDistancePrice();
 
    if(direction > 0)
    {
@@ -3255,6 +4560,397 @@ bool CanOpenTradeNow()
    return true;
 }
 
+bool IsAtrRegimeGateApproved(const double atr, string &reason)
+{
+   reason = "";
+   if(!P.useAtrRegimeGate)
+      return true;
+
+   if(atr <= 0.0)
+   {
+      reason = "ATR invalido";
+      return false;
+   }
+
+   const int maLen = MathMax(10, P.regimeAtrMaLen);
+   const double atrLong = ATR_SMA_Long(maLen, 1);
+   if(atrLong == EMPTY_VALUE || atrLong <= 0.0)
+   {
+      reason = StringFormat("ATR_MA(%d) indisponivel", maLen);
+      return false;
+   }
+
+   const double mult = MathMax(0.10, P.regimeAtrMult);
+   const double minAtr = atrLong * mult;
+   if(atr <= minAtr)
+   {
+      reason = StringFormat("ATR=%.5f <= ATR_MA(%d)*%.2f (%.5f)",
+                            atr,
+                            maLen,
+                            mult,
+                            minAtr);
+      return false;
+   }
+
+   return true;
+}
+
+bool IsAutoPauseBlocked(string &reason)
+{
+   reason = "";
+   if(!P.useAutoPause)
+      return false;
+
+   const datetime now = CurrentTimeSafe();
+   const int window = MathMax(5, P.autoPauseWindowTrades);
+
+   double pf = 1.0;
+   double winrate = 0.50;
+   double localDdPct = 0.0;
+   int samples = 0;
+   const bool hasPerf = ComputeRecentPerformance(window, pf, winrate, localDdPct, samples);
+
+   if(g_autoPauseUntil > 0 && now >= g_autoPauseUntil)
+   {
+      g_autoPauseUntil = 0;
+      DebugLog(DBG_SIGNALS, "[AUTO_PAUSE] periodo encerrado; trading reabilitado.");
+   }
+
+   if(g_autoPauseUntil > now)
+   {
+      if(hasPerf && samples >= window &&
+         pf >= P.autoPausePfResume &&
+         localDdPct <= (P.autoPauseDdStopPct * 0.80))
+      {
+         g_autoPauseUntil = 0;
+         DebugLog(DBG_SIGNALS,
+                  StringFormat("[AUTO_PAUSE] liberado antecipadamente | pf=%.2f | dd=%.2f%% | winrate=%.2f%% | amostra=%d",
+                               pf,
+                               localDdPct,
+                               winrate * 100.0,
+                               samples));
+         return false;
+      }
+
+      g_tel.autoPauseBlocks++;
+      reason = StringFormat("ativo ate %s | pf=%.2f | dd=%.2f%% | amostra=%d",
+                            TimeToString(g_autoPauseUntil, TIME_DATE | TIME_MINUTES),
+                            pf,
+                            localDdPct,
+                            samples);
+      return true;
+   }
+
+   if(!hasPerf || samples < window)
+      return false;
+
+   if(pf < P.autoPausePfStop || localDdPct > P.autoPauseDdStopPct)
+   {
+      const int holdHours = MathMax(1, P.autoPauseHours);
+      g_autoPauseUntil = now + (holdHours * 3600);
+      g_tel.autoPauseTriggers++;
+      g_tel.autoPauseBlocks++;
+
+      reason = StringFormat("trigger pf=%.2f (<%.2f) dd=%.2f%% (>%.2f%%) amostra=%d pausa=%dh",
+                            pf,
+                            P.autoPausePfStop,
+                            localDdPct,
+                            P.autoPauseDdStopPct,
+                            samples,
+                            holdHours);
+
+      LogAndPersist(StringFormat("[AUTO_PAUSE] acionado | %s", reason));
+      if(g_lq.hasPending)
+         HardResetLiquidity("Auto-pause acionado");
+      return true;
+   }
+
+   return false;
+}
+
+double ComputePerformanceRiskScale(double &pf, double &winrate, double &localDdPct, int &samples)
+{
+   pf = 1.0;
+   winrate = 0.50;
+   localDdPct = 0.0;
+   samples = 0;
+
+   if(!P.useRiskLadder)
+      return 1.0;
+
+   const int window = MathMax(5, P.riskLadderWindowTrades);
+   if(!ComputeRecentPerformance(window, pf, winrate, localDdPct, samples) || samples < window)
+      return 1.0;
+
+   double scale = 1.0;
+   const double wrPct = winrate * 100.0;
+
+   if(pf > P.riskLadderHighPf &&
+      wrPct >= P.riskLadderHighWinrate &&
+      localDdPct < P.riskLadderHighDdMaxPct)
+   {
+      scale = P.riskLadderHighScale;
+   }
+   else if(pf > P.riskLadderMidPf && wrPct >= P.riskLadderMidWinrate)
+   {
+      scale = P.riskLadderMidScale;
+   }
+   else if(pf < P.riskLadderLowPf)
+   {
+      scale = P.riskLadderLowScale;
+   }
+
+   const double maxScale = MathMax(1.0, P.riskLadderMaxScale);
+   return ClampValue(scale, 0.10, maxScale);
+}
+
+bool CanOpenTradeNowWithContext(const double atr)
+{
+   if(!CanOpenTradeNow())
+      return false;
+
+   string autoPauseReason = "";
+   if(IsAutoPauseBlocked(autoPauseReason))
+   {
+      LogBlockThrottled("Bloqueio: auto-pause por performance", autoPauseReason);
+      return false;
+   }
+
+   string regimeReason = "";
+   if(!IsAtrRegimeGateApproved(atr, regimeReason))
+   {
+      g_tel.regimeBlocks++;
+      LogBlockThrottled("Bloqueio: regime ATR macro nao aprovado", regimeReason);
+      return false;
+   }
+
+   return true;
+}
+
+void ApplyExecutionProfileParams(Params &params, const int execProfile)
+{
+   const double baseRisk = MathMax(0.05, g_baseParams.riskPct);
+   const int baseMaxTrades = MathMax(1, g_baseParams.maxTradesPerDay);
+
+   params.onePosPerSymbol = true; // Mantem sem exposicao simultanea no simbolo.
+
+   if(execProfile == EP_AGGRESSIVE)
+   {
+      params.riskPct = ClampValue(MathMax(baseRisk, 0.90), 0.05, 1.25);
+      params.stopAtrMult = 2.00;
+      params.tpAtrMult = 1.70;
+      params.lqSweepBufferAtr = 0.55;
+      params.lqMinDisplacementAtr = 0.75;
+      params.regimeAtrMult = 1.35;
+      params.shieldAtrShockMult = 1.35;
+      params.maxTradesPerDay = MathMax(baseMaxTrades, (int)MathRound((double)baseMaxTrades * 1.50));
+      return;
+   }
+
+   if(execProfile == EP_DEFENSIVE)
+   {
+      params.riskPct = ClampValue(MathMin(baseRisk * 0.50, 0.30), 0.05, 1.25);
+      params.stopAtrMult = 2.40;
+      params.tpAtrMult = 1.30;
+      params.lqSweepBufferAtr = 0.70;
+      params.lqMinDisplacementAtr = 0.90;
+      params.regimeAtrMult = 1.10;
+      params.shieldAtrShockMult = 1.10;
+      params.maxTradesPerDay = MathMax(3, (int)MathRound((double)baseMaxTrades * 0.50));
+      return;
+   }
+
+   // EP_NORMAL
+   params.riskPct = ClampValue(baseRisk, 0.05, 1.25);
+   params.stopAtrMult = 2.20;
+   params.tpAtrMult = 1.50;
+   params.lqSweepBufferAtr = 0.60;
+   params.lqMinDisplacementAtr = 0.80;
+   params.regimeAtrMult = 1.25;
+   params.shieldAtrShockMult = 1.25;
+   params.maxTradesPerDay = baseMaxTrades;
+}
+
+void ApplyRuntimeModeTradeTuning(Params &params)
+{
+   if(!IsXauUsdM5ManagedTemplate(InpConfigTemplate) || params.tf != PERIOD_M5)
+      return;
+
+   // Breakouts em Adaptive precisam stop mais curto e gerenciamento menos ansioso
+   // para evitar muitas saídas pequenas enquanto os poucos erros ficam cheios.
+   if(Mode == Adaptive)
+   {
+      if(g_runtimeMode == Quantum)
+      {
+         params.riskPct = ClampValue(params.riskPct * 0.85, 0.05, 1.25);
+         params.stopAtrMult = MathMin(params.stopAtrMult, 1.00);
+         params.tpAtrMult = MathMax(params.tpAtrMult, 2.80);
+         params.minTrendStrengthAtr = MathMax(params.minTrendStrengthAtr, 0.038);
+         params.breakoutBodyAtrMin = MathMax(params.breakoutBodyAtrMin, 0.10);
+         params.breakoutCloseStrengthMin = MathMax(params.breakoutCloseStrengthMin, 0.52);
+         params.hurstMin = MathMax(params.hurstMin, 0.56);
+         params.autocorrMinAbs = MathMax(params.autocorrMinAbs, 0.12);
+         params.breakEvenAtrTrigger = MathMax(params.breakEvenAtrTrigger, 1.35);
+         params.breakEvenOffsetPoints = MathMin(params.breakEvenOffsetPoints, 5);
+         params.trailStartAtr = MathMax(params.trailStartAtr, 1.70);
+         params.trailAtrMult = MathMax(params.trailAtrMult, 1.55);
+         params.maxTradesPerDay = MathMax(3, (int)MathRound((double)params.maxTradesPerDay * 0.85));
+         return;
+      }
+
+      if(g_runtimeMode == Core)
+      {
+         params.riskPct = ClampValue(params.riskPct * 0.90, 0.05, 1.25);
+         params.stopAtrMult = MathMin(params.stopAtrMult, 1.45);
+         params.tpAtrMult = MathMax(params.tpAtrMult, 1.85);
+         params.breakEvenAtrTrigger = MathMax(params.breakEvenAtrTrigger, 0.85);
+         params.breakEvenOffsetPoints = MathMin(params.breakEvenOffsetPoints, 10);
+         params.trailStartAtr = MathMax(params.trailStartAtr, 1.10);
+         params.trailAtrMult = MathMax(params.trailAtrMult, 1.20);
+      }
+   }
+}
+
+void UpdateExecutionProfile(const double atr, const double pascalAtr)
+{
+   // Perfil dinamico dedicado ao template XAUUSD M5 RoboForex (tambem como camada final quando Mode=Adaptive).
+   if(!IsXauUsdM5ManagedTemplate(InpConfigTemplate) || P.tf != PERIOD_M5)
+      return;
+
+   double adx = GetADXMain(1);
+   if(adx == EMPTY_VALUE || adx < 0.0)
+      adx = 0.0;
+
+   double atrRef = ATR_SMA_Long(MathMax(50, P.regimeAtrMaLen), 1);
+   if(atrRef == EMPTY_VALUE || atrRef <= 0.0)
+      atrRef = (pascalAtr > 0.0 ? pascalAtr : atr);
+   const double volRatio = (atrRef > 0.0 ? atr / atrRef : 1.0);
+
+   const double spreadNow = CurrentSpreadPoints();
+   const double spreadMedian = SpreadMedianPoints(MathMax(50, P.spreadMedianLen), 1);
+   const double spreadRatio = (spreadMedian > 0.0 ? spreadNow / spreadMedian : 1.0);
+
+   double pfRecent = 1.0, wrRecent = 0.50, localDdPct = 0.0;
+   int perfSamples = 0;
+   const bool hasPerf = ComputeRecentPerformance(MathMax(10, P.autoPauseWindowTrades),
+                                                 pfRecent,
+                                                 wrRecent,
+                                                 localDdPct,
+                                                 perfSamples);
+
+   const bool marketAgg = (spreadRatio <= 1.6 && volRatio >= 1.05 && volRatio <= 1.60 && adx >= 22.0);
+   const bool marketDef = (spreadRatio > 2.0 || volRatio > 1.8);
+
+   const bool perfForceDef = (g_consecLosses >= 2) ||
+                             (hasPerf && perfSamples >= 10 && localDdPct > 1.50);
+   const bool perfBlockAgg = (hasPerf && perfSamples >= 10 &&
+                              (pfRecent < 1.10 || localDdPct > 1.20 || g_consecLosses >= 2));
+
+   const bool condAgg = (marketAgg && !perfBlockAgg);
+   const bool condDef = (marketDef || perfForceDef);
+   const bool condNorm = (!condAgg && !condDef);
+
+   if(condAgg)
+   {
+      g_execProfileAggrConfirm++;
+      g_execProfileNormConfirm = 0;
+      g_execProfileDefConfirm = 0;
+   }
+   else if(condDef)
+   {
+      g_execProfileDefConfirm++;
+      g_execProfileNormConfirm = 0;
+      g_execProfileAggrConfirm = 0;
+   }
+   else
+   {
+      g_execProfileNormConfirm++;
+      g_execProfileAggrConfirm = 0;
+      g_execProfileDefConfirm = 0;
+   }
+
+   if(g_execProfileLockBars > 0)
+      g_execProfileLockBars--;
+
+   int targetProfile = g_execProfile;
+   if(g_execProfileLockBars <= 0)
+   {
+      if(g_execProfileDefConfirm >= 3)
+         targetProfile = EP_DEFENSIVE;
+      else if(g_execProfileAggrConfirm >= 3)
+         targetProfile = EP_AGGRESSIVE;
+      else if(g_execProfileNormConfirm >= 3)
+         targetProfile = EP_NORMAL;
+   }
+
+   if(targetProfile != g_execProfile)
+   {
+      const int oldProfile = g_execProfile;
+      g_execProfile = targetProfile;
+      g_execProfileLockBars = 6; // 30 minutos no M5.
+      g_execProfileNormConfirm = 0;
+      g_execProfileAggrConfirm = 0;
+      g_execProfileDefConfirm = 0;
+
+      LogAndPersist(StringFormat("[PROFILE] switch %s -> %s | volRatio=%.2f | adx=%.1f | spreadRatio=%.2f | pf=%.2f | ddLocal=%.2f%% | consecLoss=%d",
+                                 ExecProfileToString(oldProfile),
+                                 ExecProfileToString(g_execProfile),
+                                 volRatio,
+                                 adx,
+                                 spreadRatio,
+                                 pfRecent,
+                                 localDdPct,
+                                 g_consecLosses));
+   }
+
+   ApplyExecutionProfileParams(P, g_execProfile);
+   ApplyRuntimeModeTradeTuning(P);
+
+   DebugLog(DBG_VERBOSE,
+            StringFormat("[PROFILE] state=%s | lock=%d | volRatio=%.2f | adx=%.1f | spreadRatio=%.2f | perfSamples=%d | pf=%.2f | ddLocal=%.2f%% | risk=%.2f",
+                         ExecProfileToString(g_execProfile),
+                         g_execProfileLockBars,
+                         volRatio,
+                         adx,
+                         spreadRatio,
+                         perfSamples,
+                         pfRecent,
+                         localDdPct,
+                         P.riskPct));
+}
+
+bool FindLatestPositionTicket(const long magic, const int direction, ulong &ticketOut)
+{
+   ticketOut = 0;
+   long bestTimeMsc = -1;
+   const long desiredType = (direction > 0 ? POSITION_TYPE_BUY : POSITION_TYPE_SELL);
+
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      const ulong ticket = PositionGetTicket(i);
+      if(ticket == 0 || !PositionSelectByTicket(ticket))
+         continue;
+
+      if(PositionGetString(POSITION_SYMBOL) != _Symbol)
+         continue;
+
+      if(PositionGetInteger(POSITION_MAGIC) != magic)
+         continue;
+
+      if(PositionGetInteger(POSITION_TYPE) != desiredType)
+         continue;
+
+      const long tmsc = PositionGetInteger(POSITION_TIME_MSC);
+      if(tmsc >= bestTimeMsc)
+      {
+         bestTimeMsc = tmsc;
+         ticketOut = ticket;
+      }
+   }
+
+   return (ticketOut > 0);
+}
+
 bool ExecuteEntry(const int direction,
                   const double atr,
                   const string origin,
@@ -3319,6 +5015,7 @@ bool ExecuteEntry(const int direction,
       orderComment = (isLiquidityOrigin ? LQ_COMMENT : "AplexFlow Engine");
 
    bool ok = false;
+   bool usedTwoStep = false;
    if(direction > 0)
       ok = g_trade.Buy(lot, _Symbol, 0.0, stop, target, orderComment);
    else
@@ -3326,9 +5023,96 @@ bool ExecuteEntry(const int direction,
 
    if(!ok)
    {
-      PrintFormat("Falha na entrada | origem=%s | retcode=%d | msg=%s",
-                  origin, g_trade.ResultRetcode(), g_trade.ResultRetcodeDescription());
-      return false;
+      const uint retcode = g_trade.ResultRetcode();
+      const string retmsg = g_trade.ResultRetcodeDescription();
+      PrintFormat("Falha na entrada | origem=%s | retcode=%u | msg=%s",
+                  origin, retcode, retmsg);
+
+      const bool tryTwoStep = (P.useTwoStepExecutionFallback &&
+                               (stop > 0.0 || target > 0.0) &&
+                               (retcode == TRADE_RETCODE_INVALID_STOPS || retcode == TRADE_RETCODE_INVALID_PRICE));
+      if(!tryTwoStep)
+         return false;
+
+      DebugLog(DBG_SIGNALS,
+               StringFormat("[EXEC_2STEP] fallback ativado | origem=%s | retcode=%u | msg=%s",
+                            origin,
+                            retcode,
+                            retmsg));
+
+      if(direction > 0)
+         ok = g_trade.Buy(lot, _Symbol, 0.0, 0.0, 0.0, orderComment);
+      else
+         ok = g_trade.Sell(lot, _Symbol, 0.0, 0.0, 0.0, orderComment);
+
+      if(!ok)
+      {
+         PrintFormat("[EXEC_2STEP] falha no passo 1 (sem SL/TP) | origem=%s | retcode=%d | msg=%s",
+                     origin,
+                     g_trade.ResultRetcode(),
+                     g_trade.ResultRetcodeDescription());
+         return false;
+      }
+
+      usedTwoStep = true;
+      ulong posTicket = 0;
+      const long expectedMagic = (isLiquidityOrigin ? LQ_MAGIC_NUMBER : MAGIC_NUMBER);
+      if(FindLatestPositionTicket(expectedMagic, direction, posTicket))
+      {
+         int modRetcode = 0;
+         string modComment = "";
+         if(!ModifyPositionStops(posTicket, _Symbol, stop, target, modRetcode, modComment))
+         {
+            DebugLog(DBG_SIGNALS,
+                     StringFormat("[EXEC_2STEP] passo 2 falhou | ticket=%I64u | retcode=%d | msg=%s | sl=%.5f | tp=%.5f",
+                                  posTicket,
+                                  modRetcode,
+                                  modComment,
+                                  stop,
+                                  target));
+         }
+         else
+         {
+            DebugLog(DBG_SIGNALS,
+                     StringFormat("[EXEC_2STEP] passo 2 OK | ticket=%I64u | sl=%.5f | tp=%.5f",
+                                  posTicket,
+                                  stop,
+                                  target));
+         }
+      }
+      else
+      {
+         bool modifiedBySymbol = false;
+         if(PositionSelect(_Symbol))
+         {
+            const long posMagic = PositionGetInteger(POSITION_MAGIC);
+            const long posType = PositionGetInteger(POSITION_TYPE);
+            const long needType = (direction > 0 ? POSITION_TYPE_BUY : POSITION_TYPE_SELL);
+            if(posMagic == expectedMagic && posType == needType)
+            {
+               const ulong symTicket = (ulong)PositionGetInteger(POSITION_TICKET);
+               int modRetcode = 0;
+               string modComment = "";
+               if(ModifyPositionStops(symTicket, _Symbol, stop, target, modRetcode, modComment))
+               {
+                  modifiedBySymbol = true;
+                  DebugLog(DBG_SIGNALS,
+                           StringFormat("[EXEC_2STEP] passo 2 OK via symbol-select | ticket=%I64u | sl=%.5f | tp=%.5f",
+                                        symTicket,
+                                        stop,
+                                        target));
+               }
+            }
+         }
+
+         if(!modifiedBySymbol)
+         {
+            DebugLog(DBG_SIGNALS,
+                     StringFormat("[EXEC_2STEP] passo 2 ignorado: ticket nao localizado | origem=%s | magic=%I64d",
+                                  origin,
+                                  expectedMagic));
+         }
+      }
    }
 
    g_tradesToday++;
@@ -3339,6 +5123,11 @@ bool ExecuteEntry(const int direction,
 
    PrintFormat("Entrada executada | origem=%s | dir=%s | lote=%.2f | SL=%.5f | TP=%.5f | tradesHoje=%d",
                origin, (direction > 0 ? "BUY" : "SELL"), lot, stop, target, g_tradesToday);
+
+    if(usedTwoStep)
+      DebugLog(DBG_SIGNALS,
+               StringFormat("[EXEC_2STEP] entrada executada com fallback em 2 etapas | origem=%s",
+                            origin));
 
    if(g_lastExecSlippagePoints > 0.0)
    {
@@ -3503,7 +5292,7 @@ bool ManageLiquidityPendingLifecycleOnNewBar(const double atr,
       return false;
    }
 
-   const int maxAge = MathMax(1, P.lqRetestMaxAgeBars);
+   const int maxAge = ComputeDynamicPendingMaxAge(atr, g_lq.direction, g_lq.pendingPrice);
    const int barsSincePending = g_lq.pendingBarsElapsed;
 
    if(barsSincePending < maxAge)
@@ -3553,7 +5342,7 @@ bool ManageLiquidityPendingLifecycleOnNewBar(const double atr,
 
    DebugLog(DBG_SIGNALS, "[LQ_HYBRID] pendente expirada; tentando fallback para MARKET.");
 
-   if(!CanOpenTradeNow())
+   if(!CanOpenTradeNowWithContext(atr))
    {
       HardResetLiquidity("Hybrid fallback bloqueado por filtros hard");
       return true;
@@ -3618,7 +5407,7 @@ void TryLiquidityScalpFlowOnNewBar(const double atr, const double pascalAtr)
    if(ManageLiquidityPendingLifecycleOnNewBar(atr, pascalAtr, soft))
       return;
 
-   if(!CanOpenTradeNow())
+   if(!CanOpenTradeNowWithContext(atr))
       return;
 
    if(!IsSpreadAcceptable(atr))
@@ -3674,7 +5463,8 @@ void TryLiquidityScalpFlowOnNewBar(const double atr, const double pascalAtr)
          return;
       }
 
-      if(PlaceLiquidityPendingOrder(direction, entryPrice, customStop, customTarget, lots, P.lqRetestMaxAgeBars))
+      const int pendingExpireBars = ComputeDynamicPendingMaxAge(atr, g_lq.direction, g_lq.pendingPrice);
+      if(PlaceLiquidityPendingOrder(direction, entryPrice, customStop, customTarget, lots, pendingExpireBars))
          return;
 
       if(g_lq.entryModeUsed == HYBRID)
@@ -3723,9 +5513,22 @@ void TryTradingFlowOnNewBar()
 
    double slope = 0.0;
    const int trend = TrendDirection(slope);
-   UpdateAdaptiveParams(atr, pascalAtr, slope, trend);
+   if(Mode == Adaptive)
+   {
+      UpdateAdaptiveParams(atr, pascalAtr, slope, trend);
+      UpdateExecutionProfile(atr, pascalAtr);
+   }
+   else
+   {
+      P = g_baseParams;
+      g_runtimeMode = LiquidityScalp;
+      Profile = Safe;
+      if(InpModeForceModules)
+         ApplyStrategyModeToParams(P, g_runtimeMode);
+      UpdateLive247LiquidityProfile(atr, pascalAtr, slope, trend);
+   }
 
-   if(g_runtimeMode == LiquidityScalp || Mode == LiquidityScalp)
+   if(g_lqEnabled && (g_runtimeMode == LiquidityScalp || Mode == LiquidityScalp))
    {
       OnNewBarLiquidity(atr, pascalAtr);
       return;
@@ -3740,7 +5543,7 @@ void TryTradingFlowOnNewBar()
    if(P.useFibo)
       AgePullbackSetup();
 
-   if(!CanOpenTradeNow())
+   if(!CanOpenTradeNowWithContext(atr))
       return;
 
    if(atr <= pascalAtr * P.atrFilterMult)
@@ -3849,6 +5652,7 @@ int OnInit()
    g_lastRegimeChangeBar = 0;
 
    LogConfig();
+   LogSymbolExecutionSpec();
 
    g_atrHandle = iATR(_Symbol, P.tf, P.atrPeriod);
    if(g_atrHandle == INVALID_HANDLE)
@@ -3856,6 +5660,13 @@ int OnInit()
       Print("Falha ao criar handle ATR.");
       return INIT_FAILED;
    }
+
+    g_adxHandle = iADX(_Symbol, P.tf, 14);
+    if(g_adxHandle == INVALID_HANDLE)
+    {
+      Print("Falha ao criar handle ADX.");
+      return INIT_FAILED;
+    }
 
    g_trade.SetExpertMagicNumber(MAGIC_NUMBER);
    g_trade.SetDeviationInPoints(P.maxDeviationPoints);
@@ -3873,6 +5684,8 @@ void OnDeinit(const int reason)
 
    if(g_atrHandle != INVALID_HANDLE)
       IndicatorRelease(g_atrHandle);
+   if(g_adxHandle != INVALID_HANDLE)
+      IndicatorRelease(g_adxHandle);
 
    CloseDebugLogFile();
 }

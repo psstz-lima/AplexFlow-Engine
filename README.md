@@ -17,30 +17,25 @@ Arquivo principal: `AplexFlow_Engine.mq5`
 2. Compile no MetaEditor.
 3. Anexe o EA ao grafico do simbolo desejado.
 4. Ajuste os inputs:
-   - `Profile`: `Safe` ou `Aggressive`
-   - `Mode`: `Core`, `Pullback`, `Quantum`, `Defensive`, `Adaptive`, `LiquidityScalp`
+   - `InpTradingMode`: `TM_ADAPTIVE` ou `TM_LIQUIDITY`
    - `Shield`: `SHIELD_OFF` ou `SHIELD_ON`
-   - `DebugMode`: `false/true` para logs detalhados
+   - `Debug`: `DBG_OFF`, `DBG_SIGNALS`, `DBG_SIGNALS_SHIELD`, `DBG_VERBOSE`
+   - `InpConfigTemplate`: recomendado `CFG_XAUUSD_M5_247_LIVE` para operacao 24/7 em `XAUUSD M5`; `CFG_XAUUSD_M5_RBFX_STD` fica como perfil agressivo recente
 5. Habilite AutoTrading no terminal.
 
 ## Inputs Expostos
 
-- `Profile`:
-  - `Safe`: risco menor, menos trades/dia, filtros mais conservadores.
-  - `Aggressive`: risco maior, mais trades/dia.
-  - Timeframe operacional: detectado automaticamente pelo timeframe do grafico/tester selecionado.
-- `Mode`:
-  - `Core`: breakout + tendencia + risco (sem fibo/quant).
-  - `Pullback`: breakout para criar setup + gatilho em niveis Fibonacci.
-  - `Quantum`: `Pullback` + filtros Hurst e Autocorrelacao.
-  - `Defensive`: `Pullback` + filtros Hurst e Entropy.
-  - `Adaptive`: alterna automaticamente entre `Core/Pullback/Quantum/Defensive` conforme regime de mercado.
-  - `LiquidityScalp`: pipeline estrutural `SWING -> SWEEP -> DISPLACEMENT -> MSS -> ENTRY`.
+- `InpTradingMode`:
+  - `TM_ADAPTIVE`: o EA alterna internamente entre `Core/Pullback/Quantum/Defensive` conforme regime.
+  - `TM_LIQUIDITY`: executa somente pipeline estrutural `SWING -> SWEEP -> DISPLACEMENT -> MSS -> ENTRY`.
 - `Shield`:
   - `SHIELD_ON`: bloqueia novas entradas sob spread spike, ATR shock, candle shock e slippage anormal.
   - `SHIELD_OFF`: desabilita o bloqueio de microestrutura.
-- `DebugMode`:
+- `Debug`:
   - habilita logs com tags `[LQ_SWEEP]`, `[LQ_DISP]`, `[LQ_MSS]`, `[LQ_ENTRY]`, `[SHIELD_BLOCK]`, `[RISK_ADJUST]`.
+- `InpConfigTemplate`:
+  - `CFG_XAUUSD_M5_247_LIVE`: perfil validado para operacao continua em `XAUUSD M5`, priorizando lucro positivo em janelas encadeadas.
+  - `CFG_XAUUSD_M5_RBFX_STD`: perfil mais agressivo, melhor para janelas recentes, porem menos estavel no continuo.
 
 ## Fluxo de Trading (Resumo)
 
@@ -107,7 +102,7 @@ Arquivo principal: `AplexFlow_Engine.mq5`
 
 ## Sugestao de Validacao
 
-1. Backtest por modo (`Core`, `Pullback`, `Quantum`, `Defensive`) e por `Profile`.
+1. Backtest por `InpTradingMode` (`TM_ADAPTIVE`, `TM_LIQUIDITY`) e por `InpConfigTemplate`.
 2. Teste separado em conta hedging e netting.
 3. Otimizacao dos parametros de qualidade/saida por ativo:
    - `tpAtrMult`

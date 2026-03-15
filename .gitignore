@@ -1,1 +1,5 @@
 compile.log
+build.log
+mt5-portable/
+reports/
+tester*.ini
