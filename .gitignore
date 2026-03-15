@@ -1,5 +1,16 @@
-compile.log
-build.log
+# Local MT5 workspace and generated outputs
 mt5-portable/
 reports/
+
+# Local build logs
+build.log
+compile.log
+
+# Local tester configs
 tester*.ini
+config/tester/*.ini
+
+# Scratch workspace
+temp_*.ps1
+scratch/*
+!scratch/README.md

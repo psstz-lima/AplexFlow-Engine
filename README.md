@@ -4,6 +4,16 @@ Expert Advisor para MetaTrader 5 baseado em breakout, pullback Fibonacci e filtr
 
 Arquivo principal: `AplexFlow_Engine.mq5`
 
+## Estrutura do Projeto
+
+- `AplexFlow_Engine.mq5`: fonte principal do EA.
+- `AplexFlow_Engine.ex5`: ultimo binario compilado na raiz do projeto.
+- `scripts/`: automacoes oficiais de backtest, busca e importacao.
+- `config/tester/`: arquivos locais de configuracao do Strategy Tester.
+- `scratch/`: material temporario de pesquisa, probes e logs locais.
+- `mt5-portable/`: ambiente MT5 isolado para compilacao, importacao de historico e backtests.
+- `reports/`: pasta reservada para relatórios/exportacoes locais fora do `mt5-portable`.
+
 ## Stack e Escopo
 
 - Linguagem: MQL5
@@ -22,6 +32,14 @@ Arquivo principal: `AplexFlow_Engine.mq5`
    - `Debug`: `DBG_OFF`, `DBG_SIGNALS`, `DBG_SIGNALS_SHIELD`, `DBG_VERBOSE`
    - `InpConfigTemplate`: recomendado `CFG_XAUUSD_M5_247_LIVE` para operacao 24/7 em `XAUUSD M5`; `CFG_XAUUSD_M5_RBFX_STD` fica como perfil agressivo recente
 5. Habilite AutoTrading no terminal.
+
+## Automacao Local
+
+- Runner base de backtest: `scripts/Run-Mt5Backtest.ps1`
+- Importacao de CSV para simbolo customizado: `scripts/Import-CustomCsvHistory.ps1`
+- Scripts de tuning e pesquisa: veja `scripts/README.md`
+- Configs locais do tester: `config/tester/`
+- Scripts temporarios e diagnósticos rapidos: `scratch/experiments/`
 
 ## Inputs Expostos
 
