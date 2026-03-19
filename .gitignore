@@ -1,6 +1,9 @@
 # Local MT5 workspace and generated outputs
 mt5-portable/
+mt5-workers/
 reports/
+AplexFlow_Engine.ex5
+.vscode/
 
 # Local build logs
 build.log

@@ -10,6 +10,9 @@ param(
     [int]$Deposit = 200,
     [int]$Model = 4,
     [int]$ExecutionMode = 200,
+    [ValidateSet("single", "slow_complete", "genetic")]
+    [string]$OptimizationMode = "single",
+    [int]$OptimizationCriterion = 6,
     [string]$Currency = "USD",
     [string]$Leverage = "1:100"
 )
@@ -116,6 +119,17 @@ function Get-FirstNumber {
     return [double]::Parse($match.Value, [System.Globalization.CultureInfo]::InvariantCulture)
 }
 
+function Get-OptimizationCode {
+    param([string]$Mode)
+
+    switch ($Mode) {
+        "single" { return 0 }
+        "slow_complete" { return 1 }
+        "genetic" { return 2 }
+        default { throw "OptimizationMode invalido: '$Mode'." }
+    }
+}
+
 $portableRootResolved = (Resolve-Path $PortableRoot).Path
 $baseSetResolved = (Resolve-Path $BaseSetFile).Path
 $terminalPath = Join-Path $portableRootResolved "terminal64.exe"
@@ -126,10 +140,14 @@ $reportPath = Join-Path $reportsDir "$RunName.htm"
 $setName = "AplexFlow_Engine.$RunName.set"
 $setPath = Join-Path $profilesDir $setName
 $iniPath = Join-Path $portableRootResolved "tester.$RunName.ini"
+$optimizationCode = Get-OptimizationCode -Mode $OptimizationMode
 
 if (-not (Test-Path $terminalPath)) {
     throw "Nao encontrei o terminal em '$terminalPath'."
 }
+
+New-Item -ItemType Directory -Force -Path $profilesDir | Out-Null
+New-Item -ItemType Directory -Force -Path $reportsDir | Out-Null
 
 $lines = [System.Collections.Generic.List[string]]::new()
 foreach ($line in [System.IO.File]::ReadAllLines($baseSetResolved)) {
@@ -155,8 +173,8 @@ Symbol=$Symbol
 Period=$Period
 Model=$Model
 ExecutionMode=$ExecutionMode
-Optimization=0
-OptimizationCriterion=6
+Optimization=$optimizationCode
+OptimizationCriterion=$OptimizationCriterion
 FromDate=$FromDate
 ToDate=$ToDate
 ForwardMode=0
@@ -203,6 +221,9 @@ $result = [ordered]@{
     deposit = $Deposit
     model = $Model
     execution_mode = $ExecutionMode
+    optimization_mode = $OptimizationMode
+    optimization_code = $optimizationCode
+    optimization_criterion = $OptimizationCriterion
     overrides = $Override
     total_net_profit = Get-FirstNumber $pairs["Lucro Liquido Total:"]
     profit_factor = Get-FirstNumber $pairs["Fator de Lucro:"]
